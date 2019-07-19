@@ -1,0 +1,44 @@
+type User {
+  id: ID!
+  firstName: String!
+  lastName: String
+  wordGoal: Int!
+}
+
+type Entry {
+  id: ID!
+  User: User!
+  wordCount: Int!
+  content: String!
+}
+
+type Editor {
+  id: ID!
+  User: User!
+  showToolbar: Boolean!
+  showPrompt: Boolean!
+  showCounter: Boolean!
+}
+
+type Query {
+  editors: [Editor!]!
+  entries: [Entry!]!
+}
+
+input NewEntry {
+  userId: String!
+  wordCount: Int!
+  content: String!
+}
+
+input NewEditor {
+  userId: String!
+  showToolbar: Boolean!
+  showPrompt: Boolean!
+  showCounter: Boolean!
+}
+
+type Mutation {
+  createEntry(input: NewEntry!): Entry!
+  createEditor(input: NewEditor!): Editor!
+}
