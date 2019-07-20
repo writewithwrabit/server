@@ -1,17 +1,17 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
-  "os"
-  "database/sql"
-  "fmt"
+	"os"
 
 	"github.com/99designs/gqlgen/handler"
-  graphql "github.com/writewithwrabit/server/graphql"
-  _ "github.com/lib/pq"
-  "github.com/joho/godotenv"
-  _ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
+	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	graphql "github.com/writewithwrabit/server/graphql"
 )
 
 const defaultPort = "8080"
@@ -19,19 +19,18 @@ const defaultPort = "8080"
 var db *sql.DB
 
 func main() {
-  if err := godotenv.Load(); err != nil {
-    log.Println("File .env not found!")
-  }
+	if err := godotenv.Load(); err != nil {
+		log.Println("File .env not found!")
+	}
 
-
-  db = DB()
+	db = DB()
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
-  http.Handle("/", handler.Playground("GraphQL playground", "/query"))
+	http.Handle("/", handler.Playground("GraphQL playground", "/query"))
 	http.Handle("/query", handler.GraphQL(graphql.NewExecutableSchema(graphql.Config{Resolvers: &graphql.Resolver{}})))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
@@ -45,8 +44,9 @@ func DB() *sql.DB {
 		connectionName = mustGetenv("CLOUDSQL_CONNECTION_NAME")
 		user           = mustGetenv("CLOUDSQL_USER")
 		dbName         = os.Getenv("CLOUDSQL_DATABASE_NAME")
-		password       = os.Getenv("CLOUDSQL_PASSWORD")     
+		password       = os.Getenv("CLOUDSQL_PASSWORD")
 		socket         = os.Getenv("CLOUDSQL_SOCKET_PREFIX")
+		env            = os.Getenv("ENV")
 	)
 
 	// /cloudsql is used on App Engine.
@@ -55,7 +55,12 @@ func DB() *sql.DB {
 	}
 
 	dbURI := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=disable", connectionName, dbName, user, password)
-	conn, err := sql.Open("cloudsqlpostgres", dbURI)
+	dialer := "postgres"
+	if env == "dev" {
+		dialer = "cloudsqlpostgres"
+	}
+
+	conn, err := sql.Open(dialer, dbURI)
 
 	if err != nil {
 		panic(fmt.Sprintf("DB: %v", err))
