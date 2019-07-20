@@ -6,6 +6,7 @@ deploy:
   default: true
 before_install:
 - openssl aes-256-cbc -K $encrypted_e626bbe42ecb_key -iv $encrypted_e626bbe42ecb_iv
-  -in .prod.env.enc -out ./.prod.env -d
+  -in .prod.env.enc -out .prod.env -d
 - openssl aes-256-cbc -K $encrypted_e626bbe42ecb_key -iv $encrypted_e626bbe42ecb_iv
   -in client-secret.json.enc -out client-secret.json -d
+- mv .prod.env .env
