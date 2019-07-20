@@ -5,8 +5,8 @@ package server
 import (
 	"context"
 	"fmt"
-	"math/rand"
-) // THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
+  "math/rand"
+)
 
 type Resolver struct {
 	editors []*Editor
