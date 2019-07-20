@@ -70,6 +70,7 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
+		Email     func(childComplexity int) int
 		FirstName func(childComplexity int) int
 		ID        func(childComplexity int) int
 		LastName  func(childComplexity int) int
@@ -208,6 +209,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Entries(childComplexity), true
 
+	case "User.email":
+		if e.complexity.User.Email == nil {
+			break
+		}
+
+		return e.complexity.User.Email(childComplexity), true
+
 	case "User.firstName":
 		if e.complexity.User.FirstName == nil {
 			break
@@ -302,6 +310,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
   id: ID!
   firstName: String!
   lastName: String
+  email: String!
   wordGoal: Int!
 }
 
@@ -353,7 +362,7 @@ func (ec *executionContext) field_Mutation_createEditor_args(ctx context.Context
 	args := map[string]interface{}{}
 	var arg0 NewEditor
 	if tmp, ok := rawArgs["input"]; ok {
-		arg0, err = ec.unmarshalNNewEditor2githubᚗcomᚋwritewithwrabitᚋserverᚐNewEditor(ctx, tmp)
+		arg0, err = ec.unmarshalNNewEditor2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEditor(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -367,7 +376,7 @@ func (ec *executionContext) field_Mutation_createEntry_args(ctx context.Context,
 	args := map[string]interface{}{}
 	var arg0 NewEntry
 	if tmp, ok := rawArgs["input"]; ok {
-		arg0, err = ec.unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚐNewEntry(ctx, tmp)
+		arg0, err = ec.unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEntry(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -497,7 +506,7 @@ func (ec *executionContext) _Editor_User(ctx context.Context, field graphql.Coll
 	res := resTmp.(*User)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Editor_showToolbar(ctx context.Context, field graphql.CollectedField, obj *Editor) (ret graphql.Marshaler) {
@@ -682,7 +691,7 @@ func (ec *executionContext) _Entry_User(ctx context.Context, field graphql.Colle
 	res := resTmp.(*User)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Entry_wordCount(ctx context.Context, field graphql.CollectedField, obj *Entry) (ret graphql.Marshaler) {
@@ -800,7 +809,7 @@ func (ec *executionContext) _Mutation_createEntry(ctx context.Context, field gra
 	res := resTmp.(*Entry)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEntry(ctx, field.Selections, res)
+	return ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createEditor(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -844,7 +853,7 @@ func (ec *executionContext) _Mutation_createEditor(ctx context.Context, field gr
 	res := resTmp.(*Editor)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEditor(ctx, field.Selections, res)
+	return ec.marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_editors(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -881,7 +890,7 @@ func (ec *executionContext) _Query_editors(ctx context.Context, field graphql.Co
 	res := resTmp.([]*Editor)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNEditor2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEditor(ctx, field.Selections, res)
+	return ec.marshalNEditor2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_entries(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -918,7 +927,7 @@ func (ec *executionContext) _Query_entries(ctx context.Context, field graphql.Co
 	res := resTmp.([]*Entry)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEntry(ctx, field.Selections, res)
+	return ec.marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1102,6 +1111,43 @@ func (ec *executionContext) _User_lastName(ctx context.Context, field graphql.Co
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Email, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_wordGoal(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
@@ -2590,6 +2636,11 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "lastName":
 			out.Values[i] = ec._User_lastName(ctx, field, obj)
+		case "email":
+			out.Values[i] = ec._User_email(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "wordGoal":
 			out.Values[i] = ec._User_wordGoal(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -2865,11 +2916,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNEditor2githubᚗcomᚋwritewithwrabitᚋserverᚐEditor(ctx context.Context, sel ast.SelectionSet, v Editor) graphql.Marshaler {
+func (ec *executionContext) marshalNEditor2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx context.Context, sel ast.SelectionSet, v Editor) graphql.Marshaler {
 	return ec._Editor(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEditor2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEditor(ctx context.Context, sel ast.SelectionSet, v []*Editor) graphql.Marshaler {
+func (ec *executionContext) marshalNEditor2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx context.Context, sel ast.SelectionSet, v []*Editor) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -2893,7 +2944,7 @@ func (ec *executionContext) marshalNEditor2ᚕᚖgithubᚗcomᚋwritewithwrabit�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEditor(ctx, sel, v[i])
+			ret[i] = ec.marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -2906,7 +2957,7 @@ func (ec *executionContext) marshalNEditor2ᚕᚖgithubᚗcomᚋwritewithwrabit�
 	return ret
 }
 
-func (ec *executionContext) marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEditor(ctx context.Context, sel ast.SelectionSet, v *Editor) graphql.Marshaler {
+func (ec *executionContext) marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx context.Context, sel ast.SelectionSet, v *Editor) graphql.Marshaler {
 	if v == nil {
 		if !ec.HasError(graphql.GetResolverContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -2916,11 +2967,11 @@ func (ec *executionContext) marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋs
 	return ec._Editor(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNEntry2githubᚗcomᚋwritewithwrabitᚋserverᚐEntry(ctx context.Context, sel ast.SelectionSet, v Entry) graphql.Marshaler {
+func (ec *executionContext) marshalNEntry2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx context.Context, sel ast.SelectionSet, v Entry) graphql.Marshaler {
 	return ec._Entry(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEntry(ctx context.Context, sel ast.SelectionSet, v []*Entry) graphql.Marshaler {
+func (ec *executionContext) marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx context.Context, sel ast.SelectionSet, v []*Entry) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -2944,7 +2995,7 @@ func (ec *executionContext) marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabit�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEntry(ctx, sel, v[i])
+			ret[i] = ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -2957,7 +3008,7 @@ func (ec *executionContext) marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabit�
 	return ret
 }
 
-func (ec *executionContext) marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐEntry(ctx context.Context, sel ast.SelectionSet, v *Entry) graphql.Marshaler {
+func (ec *executionContext) marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx context.Context, sel ast.SelectionSet, v *Entry) graphql.Marshaler {
 	if v == nil {
 		if !ec.HasError(graphql.GetResolverContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -2995,11 +3046,11 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNNewEditor2githubᚗcomᚋwritewithwrabitᚋserverᚐNewEditor(ctx context.Context, v interface{}) (NewEditor, error) {
+func (ec *executionContext) unmarshalNNewEditor2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEditor(ctx context.Context, v interface{}) (NewEditor, error) {
 	return ec.unmarshalInputNewEditor(ctx, v)
 }
 
-func (ec *executionContext) unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚐNewEntry(ctx context.Context, v interface{}) (NewEntry, error) {
+func (ec *executionContext) unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEntry(ctx context.Context, v interface{}) (NewEntry, error) {
 	return ec.unmarshalInputNewEntry(ctx, v)
 }
 
@@ -3017,11 +3068,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNUser2githubᚗcomᚋwritewithwrabitᚋserverᚐUser(ctx context.Context, sel ast.SelectionSet, v User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx context.Context, sel ast.SelectionSet, v User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚐUser(ctx context.Context, sel ast.SelectionSet, v *User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx context.Context, sel ast.SelectionSet, v *User) graphql.Marshaler {
 	if v == nil {
 		if !ec.HasError(graphql.GetResolverContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
