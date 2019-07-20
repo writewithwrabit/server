@@ -8,4 +8,3 @@ before_install:
 - openssl aes-256-cbc -K $encrypted_e626bbe42ecb_key -iv $encrypted_e626bbe42ecb_iv
   -in secrets.tar.enc -out secrets.tar -d
 - tar xvf secrets.tar
-- mv env.yaml $GOPATH/src/github.com/writewithwrabit/server/env.yaml
