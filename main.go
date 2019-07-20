@@ -54,10 +54,11 @@ func DB() *sql.DB {
 		socket = "/cloudsql"
 	}
 
-	dbURI := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=disable", connectionName, dbName, user, password)
+	dbURI := fmt.Sprintf("host=/cloudsql/%s dbname=%s user=%s password=%s", connectionName, dbName, user, password)
 	dialer := "postgres"
 	if env == "dev" {
-		dialer = "cloudsqlpostgres"
+    dbURI = fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=disable", connectionName, dbName, user, password)
+    dialer = "cloudsqlpostgres"
 	}
 
 	conn, err := sql.Open(dialer, dbURI)

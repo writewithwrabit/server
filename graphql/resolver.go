@@ -5,7 +5,6 @@ package server
 import (
 	"context"
   "database/sql"
-  "fmt"
 
   wrabitDB "github.com/writewithwrabit/server/db"
 )
