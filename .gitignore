@@ -1,4 +1,5 @@
 client-secret.json
 .DS_Store
 *.env
+env.yaml
 secrets.tar
