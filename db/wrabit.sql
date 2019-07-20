@@ -8,7 +8,7 @@ CREATE TABLE users (
 
 CREATE TABLE editors (
   id SERIAL,
-  user_id int,
+  user_id varchar,
   show_toolbar boolean,
   show_prompt boolean,
   show_counter boolean
@@ -16,14 +16,14 @@ CREATE TABLE editors (
 
 CREATE TABLE entries (
   id SERIAL,
-  user_id int,
-  word_count boolean,
+  user_id varchar,
+  word_count int,
   content text
 );
 
 CREATE TABLE streaks (
   id SERIAL,
-  user_id int,
+  user_id varchar,
   day_count int
 );
 

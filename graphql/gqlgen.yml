@@ -11,9 +11,9 @@ model:
   filename: models_gen.go
 models:
   Editor:
-    model: github.com/writewithwrabit/server.Editor
+    model: github.com/writewithwrabit/server/graphql.Editor
   Entry:
-    model: github.com/writewithwrabit/server.Entry
+    model: github.com/writewithwrabit/server/graphql.Entry
 resolver:
   filename: resolver.go
   type: Resolver
