@@ -1,30 +1,30 @@
 CREATE TABLE users (
-  id varchar,
-  first_name varchar,
-  last_name varchar,
-  email varchar,
-  word_goal int DEFAULT 1000
+  id VARCHAR,
+  first_name VARCHAR,
+  last_name VARCHAR,
+  email VARCHAR,
+  word_goal INT NOT NULL DEFAULT 1000
 );
 
 CREATE TABLE editors (
   id SERIAL,
-  user_id varchar,
-  show_toolbar boolean,
-  show_prompt boolean,
-  show_counter boolean
+  user_id VARCHAR,
+  show_toolbar BOOLEAN NOT NULL DEFAULT true,
+  show_prompt BOOLEAN NOT NULL DEFAULT false,
+  show_counter BOOLEAN NOT NULL DEFAULT true
 );
 
 CREATE TABLE entries (
   id SERIAL,
-  user_id varchar,
-  word_count int,
-  content text
+  user_id VARCHAR,
+  word_count INT,
+  content TEXT
 );
 
 CREATE TABLE streaks (
   id SERIAL,
-  user_id varchar,
-  day_count int
+  user_id VARCHAR,
+  day_count INT
 );
 
 INSERT INTO users (id, first_name, last_name, email, word_goal) VALUES ('0T3AWCd9mkdDFPeV0SDXqj3GRvZ2', 'Anthony', 'Morris', 'anthony@amorrissound.com', 1000);
