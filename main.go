@@ -28,6 +28,8 @@ func main() {
 		log.Println("File .env not found!")
 	}
 
+	env := os.Getenv("NODE_ENV")
+
 	router := chi.NewRouter()
 
 	db = DB()
@@ -48,9 +50,14 @@ func main() {
 		log.Fatalf("error getting Auth client: %v\n", err)
 	}
 
-	router.Use(auth.Middleware(client))
+	if env == "dev" {
+		// Only allow the playground in dev
+		router.Handle("/", handler.Playground("GraphQL playground", "/query"))
+	} else {
+		// Require a token in prod
+		router.Use(auth.Middleware(client))
+	}
 
-	router.Handle("/", handler.Playground("GraphQL playground", "/query"))
 	router.Handle("/query", handler.GraphQL(graphql.NewExecutableSchema(graphql.New(db))))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
