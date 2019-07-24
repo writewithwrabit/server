@@ -12,6 +12,7 @@ import (
 	"github.com/99designs/gqlgen/handler"
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/writewithwrabit/server/auth"
@@ -30,7 +31,19 @@ func main() {
 
 	env := os.Getenv("NODE_ENV")
 
-	router := chi.NewRouter()
+  router := chi.NewRouter()
+  
+  // Basic CORS
+  // for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
+  cors := cors.New(cors.Options{
+    AllowedOrigins:   []string{"*"},
+    AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+    AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+    ExposedHeaders:   []string{"Link"},
+    AllowCredentials: true,
+    MaxAge:           300, // Maximum value not ignored by any of major browsers
+  })
+  router.Use(cors.Handler)
 
 	db = DB()
 
