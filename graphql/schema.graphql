@@ -1,5 +1,6 @@
 type User {
   id: ID!
+  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -22,8 +23,16 @@ type Editor {
 }
 
 type Query {
+  user(firebaseID:String): User!
   editors: [Editor!]!
   entries: [Entry!]!
+}
+
+input NewUser {
+  firebaseID: String!
+  firstName: String!
+  lastName: String
+  email: String!
 }
 
 input NewEntry {
@@ -40,6 +49,7 @@ input NewEditor {
 }
 
 type Mutation {
+  createUser(input: NewUser!): User!
   createEntry(input: NewEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
 }
