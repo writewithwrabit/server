@@ -39,21 +39,21 @@ func main() {
 		port = defaultPort
 	}
 
-	opt := option.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
-	app, err := firebase.NewApp(context.Background(), nil, opt)
-	if err != nil {
-		log.Fatalf("error initializing app: %v\n", err)
-	}
-
-	client, err := app.Auth(context.Background())
-	if err != nil {
-		log.Fatalf("error getting Auth client: %v\n", err)
-	}
-
 	if env == "dev" {
 		// Only allow the playground in dev
 		router.Handle("/", handler.Playground("GraphQL playground", "/query"))
 	} else {
+		opt := option.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+		app, err := firebase.NewApp(context.Background(), nil, opt)
+		if err != nil {
+			log.Fatalf("error initializing app: %v\n", err)
+		}
+
+		client, err := app.Auth(context.Background())
+		if err != nil {
+			log.Fatalf("error getting Auth client: %v\n", err)
+		}
+
 		// Require a token in prod
 		router.Use(auth.Middleware(client))
 	}

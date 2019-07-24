@@ -15,6 +15,12 @@ type NewEntry struct {
 	Content   string `json:"content"`
 }
 
+type NewUser struct {
+	FirstName string  `json:"firstName"`
+	LastName  *string `json:"lastName"`
+	Email     string  `json:"email"`
+}
+
 type User struct {
 	ID        string  `json:"id"`
 	FirstName string  `json:"firstName"`

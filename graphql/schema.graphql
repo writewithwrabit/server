@@ -22,8 +22,15 @@ type Editor {
 }
 
 type Query {
+  user(id:ID): User!
   editors: [Editor!]!
   entries: [Entry!]!
+}
+
+input NewUser {
+  firstName: String!
+  lastName: String
+  email: String!
 }
 
 input NewEntry {
@@ -40,6 +47,7 @@ input NewEditor {
 }
 
 type Mutation {
+  createUser(input: NewUser!): User!
   createEntry(input: NewEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
 }
