@@ -16,15 +16,17 @@ type NewEntry struct {
 }
 
 type NewUser struct {
-	FirstName string  `json:"firstName"`
-	LastName  *string `json:"lastName"`
-	Email     string  `json:"email"`
+	FirebaseID string  `json:"firebaseID"`
+	FirstName  string  `json:"firstName"`
+	LastName   *string `json:"lastName"`
+	Email      string  `json:"email"`
 }
 
 type User struct {
-	ID        string  `json:"id"`
-	FirstName string  `json:"firstName"`
-	LastName  *string `json:"lastName"`
-	Email     string  `json:"email"`
-	WordGoal  int     `json:"wordGoal"`
+	ID         string  `json:"id"`
+	FirebaseID string  `json:"firebaseID"`
+	FirstName  string  `json:"firstName"`
+	LastName   *string `json:"lastName"`
+	Email      string  `json:"email"`
+	WordGoal   int     `json:"wordGoal"`
 }

@@ -1,5 +1,6 @@
 type User {
   id: ID!
+  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -22,12 +23,13 @@ type Editor {
 }
 
 type Query {
-  user(id:ID): User!
+  user(firebaseID:String): User!
   editors: [Editor!]!
   entries: [Entry!]!
 }
 
 input NewUser {
+  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!

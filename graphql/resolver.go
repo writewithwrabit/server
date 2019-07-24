@@ -4,8 +4,8 @@ package server
 
 import (
 	"context"
-  "database/sql"
-  "fmt"
+	"database/sql"
+	"fmt"
 
 	wrabitDB "github.com/writewithwrabit/server/db"
 )
@@ -44,14 +44,14 @@ type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
 	user := &User{
-		ID:        "",
-		FirstName: input.FirstName,
-		LastName:  input.LastName,
-		Email:     input.Email,
+		FirebaseID: input.FirebaseID,
+		FirstName:  input.FirstName,
+		LastName:   input.LastName,
+		Email:      input.Email,
 	}
 
-  res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id", user.FirstName, user.LastName, user.Email)
-  fmt.Println(res)
+	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (firebase_id, first_name, last_name, email) VALUES ($1, $2, $3, $4) RETURNING id", user.FirebaseID, user.FirstName, user.LastName, user.Email)
+	fmt.Println(res)
 	if err := res.Scan(&user.ID); err != nil {
 		panic(err)
 	}
@@ -94,15 +94,15 @@ func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*
 
 type queryResolver struct{ *Resolver }
 
-func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE id = $1", id)
+func (r *queryResolver) User(ctx context.Context, firebaseID *string) (*User, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", firebaseID)
 
-	var user *User
-	if err := res.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	var user User
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 func (r *queryResolver) Editors(ctx context.Context) ([]*Editor, error) {
@@ -142,10 +142,10 @@ func (r *queryResolver) Entries(ctx context.Context) ([]*Entry, error) {
 type editorResolver struct{ *Resolver }
 
 func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE id = $1", obj.UserID)
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
 	}
 
@@ -155,10 +155,10 @@ func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
 type entryResolver struct{ *Resolver }
 
 func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE id = $1", obj.UserID)
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
 	}
 

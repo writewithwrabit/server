@@ -68,15 +68,16 @@ type ComplexityRoot struct {
 	Query struct {
 		Editors func(childComplexity int) int
 		Entries func(childComplexity int) int
-		User    func(childComplexity int, id *string) int
+		User    func(childComplexity int, firebaseID *string) int
 	}
 
 	User struct {
-		Email     func(childComplexity int) int
-		FirstName func(childComplexity int) int
-		ID        func(childComplexity int) int
-		LastName  func(childComplexity int) int
-		WordGoal  func(childComplexity int) int
+		Email      func(childComplexity int) int
+		FirebaseID func(childComplexity int) int
+		FirstName  func(childComplexity int) int
+		ID         func(childComplexity int) int
+		LastName   func(childComplexity int) int
+		WordGoal   func(childComplexity int) int
 	}
 }
 
@@ -92,7 +93,7 @@ type MutationResolver interface {
 	CreateEditor(ctx context.Context, input NewEditor) (*Editor, error)
 }
 type QueryResolver interface {
-	User(ctx context.Context, id *string) (*User, error)
+	User(ctx context.Context, firebaseID *string) (*User, error)
 	Editors(ctx context.Context) ([]*Editor, error)
 	Entries(ctx context.Context) ([]*Entry, error)
 }
@@ -235,7 +236,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["id"].(*string)), true
+		return e.complexity.Query.User(childComplexity, args["firebaseID"].(*string)), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -243,6 +244,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Email(childComplexity), true
+
+	case "User.firebaseID":
+		if e.complexity.User.FirebaseID == nil {
+			break
+		}
+
+		return e.complexity.User.FirebaseID(childComplexity), true
 
 	case "User.firstName":
 		if e.complexity.User.FirstName == nil {
@@ -336,6 +344,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var parsedSchema = gqlparser.MustLoadSchema(
 	&ast.Source{Name: "schema.graphql", Input: `type User {
   id: ID!
+  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -358,12 +367,13 @@ type Editor {
 }
 
 type Query {
-  user(id:ID): User!
+  user(firebaseID:String): User!
   editors: [Editor!]!
   entries: [Entry!]!
 }
 
 input NewUser {
+  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -453,13 +463,13 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
-	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+	if tmp, ok := rawArgs["firebaseID"]; ok {
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["id"] = arg0
+	args["firebaseID"] = arg0
 	return args, nil
 }
 
@@ -990,7 +1000,7 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, args["id"].(*string))
+		return ec.resolvers.Query().User(rctx, args["firebaseID"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1192,6 +1202,43 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_firebaseID(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FirebaseID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_firstName(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
@@ -2562,6 +2609,12 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 
 	for k, v := range asMap {
 		switch k {
+		case "firebaseID":
+			var err error
+			it.FirebaseID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "firstName":
 			var err error
 			it.FirstName, err = ec.unmarshalNString2string(ctx, v)
@@ -2827,6 +2880,11 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("User")
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "firebaseID":
+			out.Values[i] = ec._User_firebaseID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -3534,29 +3592,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return ec.marshalOBoolean2bool(ctx, sel, *v)
-}
-
-func (ec *executionContext) unmarshalOID2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalID(v)
-}
-
-func (ec *executionContext) marshalOID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalID(v)
-}
-
-func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalOID2string(ctx, v)
-	return &res, err
-}
-
-func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec.marshalOID2string(ctx, sel, *v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
