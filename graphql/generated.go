@@ -45,16 +45,20 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Editor struct {
+		CreatedAt   func(childComplexity int) int
 		ID          func(childComplexity int) int
 		ShowCounter func(childComplexity int) int
 		ShowPrompt  func(childComplexity int) int
 		ShowToolbar func(childComplexity int) int
+		UpdatedAt   func(childComplexity int) int
 		User        func(childComplexity int) int
 	}
 
 	Entry struct {
 		Content   func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 		User      func(childComplexity int) int
 		WordCount func(childComplexity int) int
 	}
@@ -66,17 +70,20 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Editors func(childComplexity int, id *string) int
-		Entries func(childComplexity int, id *string) int
-		User    func(childComplexity int, firebaseID *string) int
+		Editors     func(childComplexity int, id *string) int
+		Entries     func(childComplexity int, id *string) int
+		LatestEntry func(childComplexity int, userID string) int
+		User        func(childComplexity int, firebaseID *string) int
 	}
 
 	User struct {
+		CreatedAt  func(childComplexity int) int
 		Email      func(childComplexity int) int
 		FirebaseID func(childComplexity int) int
 		FirstName  func(childComplexity int) int
 		ID         func(childComplexity int) int
 		LastName   func(childComplexity int) int
+		UpdatedAt  func(childComplexity int) int
 		WordGoal   func(childComplexity int) int
 	}
 }
@@ -96,6 +103,7 @@ type QueryResolver interface {
 	User(ctx context.Context, firebaseID *string) (*User, error)
 	Editors(ctx context.Context, id *string) ([]*Editor, error)
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
+	LatestEntry(ctx context.Context, userID string) (*Entry, error)
 }
 
 type executableSchema struct {
@@ -112,6 +120,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Editor.createdAt":
+		if e.complexity.Editor.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Editor.CreatedAt(childComplexity), true
 
 	case "Editor.id":
 		if e.complexity.Editor.ID == nil {
@@ -141,6 +156,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Editor.ShowToolbar(childComplexity), true
 
+	case "Editor.updatedAt":
+		if e.complexity.Editor.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Editor.UpdatedAt(childComplexity), true
+
 	case "Editor.User":
 		if e.complexity.Editor.User == nil {
 			break
@@ -155,12 +177,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Entry.Content(childComplexity), true
 
+	case "Entry.createdAt":
+		if e.complexity.Entry.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Entry.CreatedAt(childComplexity), true
+
 	case "Entry.id":
 		if e.complexity.Entry.ID == nil {
 			break
 		}
 
 		return e.complexity.Entry.ID(childComplexity), true
+
+	case "Entry.updatedAt":
+		if e.complexity.Entry.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Entry.UpdatedAt(childComplexity), true
 
 	case "Entry.User":
 		if e.complexity.Entry.User == nil {
@@ -236,6 +272,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Entries(childComplexity, args["ID"].(*string)), true
 
+	case "Query.latestEntry":
+		if e.complexity.Query.LatestEntry == nil {
+			break
+		}
+
+		args, err := ec.field_Query_latestEntry_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.LatestEntry(childComplexity, args["userID"].(string)), true
+
 	case "Query.user":
 		if e.complexity.Query.User == nil {
 			break
@@ -247,6 +295,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.User(childComplexity, args["firebaseID"].(*string)), true
+
+	case "User.createdAt":
+		if e.complexity.User.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.User.CreatedAt(childComplexity), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -282,6 +337,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.LastName(childComplexity), true
+
+	case "User.updatedAt":
+		if e.complexity.User.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.User.UpdatedAt(childComplexity), true
 
 	case "User.wordGoal":
 		if e.complexity.User.WordGoal == nil {
@@ -359,6 +421,8 @@ var parsedSchema = gqlparser.MustLoadSchema(
   lastName: String
   email: String!
   wordGoal: Int!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Entry {
@@ -366,6 +430,8 @@ type Entry {
   User: User!
   wordCount: Int!
   content: String!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Editor {
@@ -374,12 +440,15 @@ type Editor {
   showToolbar: Boolean!
   showPrompt: Boolean!
   showCounter: Boolean!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Query {
   user(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
+  latestEntry(userID: ID!): Entry!
 }
 
 input NewUser {
@@ -494,6 +563,20 @@ func (ec *executionContext) field_Query_entries_args(ctx context.Context, rawArg
 		}
 	}
 	args["ID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_latestEntry_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["userID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg0
 	return args, nil
 }
 
@@ -732,6 +815,80 @@ func (ec *executionContext) _Editor_showCounter(ctx context.Context, field graph
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Editor_createdAt(ctx context.Context, field graphql.CollectedField, obj *Editor) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Editor",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Editor_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Editor) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Editor",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Entry_id(ctx context.Context, field graphql.CollectedField, obj *Entry) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -863,6 +1020,80 @@ func (ec *executionContext) _Entry_content(ctx context.Context, field graphql.Co
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.Content, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Entry_createdAt(ctx context.Context, field graphql.CollectedField, obj *Entry) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Entry",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Entry_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Entry) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Entry",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1142,6 +1373,50 @@ func (ec *executionContext) _Query_entries(ctx context.Context, field graphql.Co
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_latestEntry(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_latestEntry_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().LatestEntry(rctx, args["userID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Entry)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1436,6 +1711,80 @@ func (ec *executionContext) _User_wordGoal(ctx context.Context, field graphql.Co
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -2744,6 +3093,16 @@ func (ec *executionContext) _Editor(ctx context.Context, sel ast.SelectionSet, o
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "createdAt":
+			out.Values[i] = ec._Editor_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Editor_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2792,6 +3151,16 @@ func (ec *executionContext) _Entry(ctx context.Context, sel ast.SelectionSet, ob
 			}
 		case "content":
 			out.Values[i] = ec._Entry_content(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "createdAt":
+			out.Values[i] = ec._Entry_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Entry_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
@@ -2904,6 +3273,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "latestEntry":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_latestEntry(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "__type":
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
@@ -2954,6 +3337,16 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "wordGoal":
 			out.Values[i] = ec._User_wordGoal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._User_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

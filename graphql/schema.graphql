@@ -5,6 +5,8 @@ type User {
   lastName: String
   email: String!
   wordGoal: Int!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Entry {
@@ -12,6 +14,8 @@ type Entry {
   User: User!
   wordCount: Int!
   content: String!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Editor {
@@ -20,12 +24,15 @@ type Editor {
   showToolbar: Boolean!
   showPrompt: Boolean!
   showCounter: Boolean!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Query {
   user(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
+  latestEntry(userID: ID!): Entry!
 }
 
 input NewUser {

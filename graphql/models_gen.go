@@ -29,4 +29,6 @@ type User struct {
 	LastName   *string `json:"lastName"`
 	Email      string  `json:"email"`
 	WordGoal   int     `json:"wordGoal"`
+	CreatedAt  string  `json:"createdAt"`
+	UpdatedAt  string  `json:"updatedAt"`
 }
