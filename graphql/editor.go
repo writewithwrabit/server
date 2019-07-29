@@ -6,4 +6,6 @@ type Editor struct {
 	ShowToolbar bool   `json:"showToolbar"`
 	ShowPrompt  bool   `json:"showPrompt"`
 	ShowCounter bool   `json:"showCounter"`
+	CreatedAt   string `json:"createdAt"`
+	UpdatedAt   string `json:"updatedAt"`
 }

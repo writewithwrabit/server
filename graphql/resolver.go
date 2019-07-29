@@ -105,14 +105,25 @@ func (r *queryResolver) User(ctx context.Context, firebaseID *string) (*User, er
 	return &user, nil
 }
 
-func (r *queryResolver) Editors(ctx context.Context) ([]*Editor, error) {
-	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM editors")
-	defer res.Close()
-
+func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, error) {
 	var editors []*Editor
-	for res.Next() {
+
+	if id == nil {
+		res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM editors")
+		defer res.Close()
+		for res.Next() {
+			var editor = new(Editor)
+			if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter, &editor.CreatedAt, &editor.UpdatedAt); err != nil {
+				panic(err)
+			}
+
+			editors = append(editors, editor)
+		}
+	} else {
+		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM editors WHERE id = $1", id)
+
 		var editor = new(Editor)
-		if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter); err != nil {
+		if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter, &editor.CreatedAt, &editor.UpdatedAt); err != nil {
 			panic(err)
 		}
 
@@ -122,14 +133,25 @@ func (r *queryResolver) Editors(ctx context.Context) ([]*Editor, error) {
 	return editors, nil
 }
 
-func (r *queryResolver) Entries(ctx context.Context) ([]*Entry, error) {
-	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries")
-	defer res.Close()
-
+func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, error) {
 	var entries []*Entry
-	for res.Next() {
+
+	if id == nil {
+		res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries")
+		defer res.Close()
+		for res.Next() {
+			var entry = new(Entry)
+			if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+				panic(err)
+			}
+
+			entries = append(entries, entry)
+		}
+	} else {
+		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE id = $1", id)
+
 		var entry = new(Entry)
-		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content); err != nil {
+		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 			panic(err)
 		}
 
@@ -139,13 +161,33 @@ func (r *queryResolver) Entries(ctx context.Context) ([]*Entry, error) {
 	return entries, nil
 }
 
+func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at BETWEEN NOW() - INTERVAL '24 HOURS' AND NOW() ORDER BY created_at DESC", userID)
+
+	fmt.Println(res)
+	var entry = new(Entry)
+	err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	if err == sql.ErrNoRows {
+		res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO entries (user_id, content, word_count) VALUES ($1, $2, $3) RETURNING id", userID, "", 0)
+		if err := res.Scan(&entry.ID); err != nil {
+			panic(err)
+		}
+	}
+
+	return entry, nil
+}
+
 type editorResolver struct{ *Resolver }
 
 func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
 
@@ -158,7 +200,7 @@ func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
 
