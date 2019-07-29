@@ -23,9 +23,9 @@ type Editor {
 }
 
 type Query {
-  user(firebaseID:String): User!
-  editors: [Editor!]!
-  entries: [Entry!]!
+  user(firebaseID: String): User!
+  editors(ID: ID): [Editor!]!
+  entries(ID: ID): [Entry!]!
 }
 
 input NewUser {

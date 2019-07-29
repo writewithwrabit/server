@@ -105,12 +105,23 @@ func (r *queryResolver) User(ctx context.Context, firebaseID *string) (*User, er
 	return &user, nil
 }
 
-func (r *queryResolver) Editors(ctx context.Context) ([]*Editor, error) {
-	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM editors")
-	defer res.Close()
-
+func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, error) {
 	var editors []*Editor
-	for res.Next() {
+
+	if id == nil {
+		res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM editors")
+		defer res.Close()
+		for res.Next() {
+			var editor = new(Editor)
+			if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter); err != nil {
+				panic(err)
+			}
+
+			editors = append(editors, editor)
+		}
+	} else {
+		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM editors WHERE id = $1", id)
+
 		var editor = new(Editor)
 		if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter); err != nil {
 			panic(err)
@@ -122,12 +133,23 @@ func (r *queryResolver) Editors(ctx context.Context) ([]*Editor, error) {
 	return editors, nil
 }
 
-func (r *queryResolver) Entries(ctx context.Context) ([]*Entry, error) {
-	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries")
-	defer res.Close()
-
+func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, error) {
 	var entries []*Entry
-	for res.Next() {
+
+	if id == nil {
+		res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries")
+		defer res.Close()
+		for res.Next() {
+			var entry = new(Entry)
+			if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content); err != nil {
+				panic(err)
+			}
+
+			entries = append(entries, entry)
+		}
+	} else {
+		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE id = $1", id)
+
 		var entry = new(Entry)
 		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content); err != nil {
 			panic(err)
