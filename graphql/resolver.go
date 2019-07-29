@@ -181,20 +181,6 @@ func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry,
 	return entry, nil
 }
 
-// } else {
-//   res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE id = $1", id)
-//   if userID != nil {
-//     res = wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at BETWEEN NOW() - INTERVAL '24 HOURS' AND NOW() ORDER BY created_at DESC", userID)
-//   }
-
-//   var entry = new(Entry)
-//   if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
-//     panic(err)
-//   }
-
-//   entries = append(entries, entry)
-// }
-
 type editorResolver struct{ *Resolver }
 
 func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
