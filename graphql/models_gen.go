@@ -2,6 +2,12 @@
 
 package server
 
+type ExistingEntry struct {
+	UserID    string `json:"userID"`
+	WordCount int    `json:"wordCount"`
+	Content   string `json:"content"`
+}
+
 type NewEditor struct {
 	UserID      string `json:"userId"`
 	ShowToolbar bool   `json:"showToolbar"`

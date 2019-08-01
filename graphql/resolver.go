@@ -75,6 +75,22 @@ func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*En
 	return entry, nil
 }
 
+func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input ExistingEntry) (*Entry, error) {
+	entry := &Entry{
+		ID:        id,
+		UserID:    input.UserID,
+		Content:   input.Content,
+		WordCount: input.WordCount,
+	}
+
+	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE entries SET content = $1, word_count = $2 WHERE id = $3 AND user_id = $4 RETURNING id", entry.Content, entry.WordCount, entry.ID, entry.UserID)
+	if err := res.Scan(&entry.ID); err != nil {
+		panic(err)
+	}
+
+	return entry, nil
+}
+
 func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*Editor, error) {
 	editor := &Editor{
 		ID:          "",

@@ -48,6 +48,12 @@ input NewEntry {
   content: String!
 }
 
+input ExistingEntry {
+  userID: String!
+  wordCount: Int!
+  content: String!
+}
+
 input NewEditor {
   userId: String!
   showToolbar: Boolean!
@@ -58,5 +64,6 @@ input NewEditor {
 type Mutation {
   createUser(input: NewUser!): User!
   createEntry(input: NewEntry!): Entry!
+  updateEntry(id: ID!, input: ExistingEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
 }
