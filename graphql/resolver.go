@@ -177,6 +177,24 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 	return entries, nil
 }
 
+func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string) ([]*Entry, error) {
+	var entries []*Entry
+
+	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1", userID)
+
+	defer res.Close()
+	for res.Next() {
+		var entry = new(Entry)
+		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+			panic(err)
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
 func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at BETWEEN NOW() - INTERVAL '24 HOURS' AND NOW() ORDER BY created_at DESC", userID)
 
