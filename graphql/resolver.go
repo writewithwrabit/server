@@ -180,7 +180,7 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string) ([]*Entry, error) {
 	var entries []*Entry
 
-	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1", userID)
+	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 ORDER BY created_at DESC", userID)
 
 	defer res.Close()
 	for res.Next() {
