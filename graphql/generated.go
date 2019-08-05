@@ -71,10 +71,11 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Editors     func(childComplexity int, id *string) int
-		Entries     func(childComplexity int, id *string) int
-		LatestEntry func(childComplexity int, userID string) int
-		User        func(childComplexity int, firebaseID *string) int
+		Editors         func(childComplexity int, id *string) int
+		Entries         func(childComplexity int, id *string) int
+		EntriesByUserID func(childComplexity int, userID string) int
+		LatestEntry     func(childComplexity int, userID string) int
+		User            func(childComplexity int, firebaseID *string) int
 	}
 
 	User struct {
@@ -105,6 +106,7 @@ type QueryResolver interface {
 	User(ctx context.Context, firebaseID *string) (*User, error)
 	Editors(ctx context.Context, id *string) ([]*Editor, error)
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
+	EntriesByUserID(ctx context.Context, userID string) ([]*Entry, error)
 	LatestEntry(ctx context.Context, userID string) (*Entry, error)
 }
 
@@ -286,6 +288,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Entries(childComplexity, args["ID"].(*string)), true
 
+	case "Query.entriesByUserID":
+		if e.complexity.Query.EntriesByUserID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_entriesByUserID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.EntriesByUserID(childComplexity, args["userID"].(string)), true
+
 	case "Query.latestEntry":
 		if e.complexity.Query.LatestEntry == nil {
 			break
@@ -462,6 +476,7 @@ type Query {
   user(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
+  entriesByUserID(userID: ID!): [Entry!]!
   latestEntry(userID: ID!): Entry!
 }
 
@@ -592,6 +607,20 @@ func (ec *executionContext) field_Query_editors_args(ctx context.Context, rawArg
 		}
 	}
 	args["ID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_entriesByUserID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["userID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg0
 	return args, nil
 }
 
@@ -1445,6 +1474,50 @@ func (ec *executionContext) _Query_entries(ctx context.Context, field graphql.Co
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Query().Entries(rctx, args["ID"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Entry)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_entriesByUserID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_entriesByUserID_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().EntriesByUserID(rctx, args["userID"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3390,6 +3463,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_entries(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "entriesByUserID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_entriesByUserID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

@@ -32,6 +32,7 @@ type Query {
   user(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
+  entriesByUserID(userID: ID!): [Entry!]!
   latestEntry(userID: ID!): Entry!
 }
 
