@@ -73,7 +73,7 @@ type ComplexityRoot struct {
 	Query struct {
 		Editors         func(childComplexity int, id *string) int
 		Entries         func(childComplexity int, id *string) int
-		EntriesByUserID func(childComplexity int, userID string) int
+		EntriesByUserID func(childComplexity int, userID string, startDate *string, endDate *string) int
 		LatestEntry     func(childComplexity int, userID string) int
 		User            func(childComplexity int, firebaseID *string) int
 	}
@@ -106,7 +106,7 @@ type QueryResolver interface {
 	User(ctx context.Context, firebaseID *string) (*User, error)
 	Editors(ctx context.Context, id *string) ([]*Editor, error)
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
-	EntriesByUserID(ctx context.Context, userID string) ([]*Entry, error)
+	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
 	LatestEntry(ctx context.Context, userID string) (*Entry, error)
 }
 
@@ -298,7 +298,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.EntriesByUserID(childComplexity, args["userID"].(string)), true
+		return e.complexity.Query.EntriesByUserID(childComplexity, args["userID"].(string), args["startDate"].(*string), args["endDate"].(*string)), true
 
 	case "Query.latestEntry":
 		if e.complexity.Query.LatestEntry == nil {
@@ -476,7 +476,7 @@ type Query {
   user(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
-  entriesByUserID(userID: ID!): [Entry!]!
+  entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   latestEntry(userID: ID!): Entry!
 }
 
@@ -621,6 +621,22 @@ func (ec *executionContext) field_Query_entriesByUserID_args(ctx context.Context
 		}
 	}
 	args["userID"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["startDate"]; ok {
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["startDate"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["endDate"]; ok {
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["endDate"] = arg2
 	return args, nil
 }
 
@@ -1517,7 +1533,7 @@ func (ec *executionContext) _Query_entriesByUserID(ctx context.Context, field gr
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().EntriesByUserID(rctx, args["userID"].(string))
+		return ec.resolvers.Query().EntriesByUserID(rctx, args["userID"].(string), args["startDate"].(*string), args["endDate"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

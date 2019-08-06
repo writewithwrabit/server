@@ -177,10 +177,19 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 	return entries, nil
 }
 
-func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string) ([]*Entry, error) {
+func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error) {
 	var entries []*Entry
 
-	res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 ORDER BY created_at DESC", userID)
+	var res *sql.Rows
+	if startDate != nil && endDate == nil {
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, startDate)
+	} else if startDate == nil && endDate != nil {
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at <= $2 ORDER BY created_at DESC", userID, endDate)
+	} else if startDate != nil && endDate != nil {
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3 ORDER BY created_at DESC", userID, startDate, endDate)
+	} else {
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 ORDER BY created_at DESC", userID)
+	}
 
 	defer res.Close()
 	for res.Next() {
