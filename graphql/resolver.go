@@ -182,13 +182,13 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 
 	var res *sql.Rows
 	if startDate != nil && endDate == nil {
-		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, startDate)
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 AND word_count > 0 ORDER BY created_at DESC", userID, startDate)
 	} else if startDate == nil && endDate != nil {
-		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at <= $2 ORDER BY created_at DESC", userID, endDate)
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at <= $2 AND word_count > 0 ORDER BY created_at DESC", userID, endDate)
 	} else if startDate != nil && endDate != nil {
-		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3 ORDER BY created_at DESC", userID, startDate, endDate)
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 AND word_count > 0 AND created_at <= $3 ORDER BY created_at DESC", userID, startDate, endDate)
 	} else {
-		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 ORDER BY created_at DESC", userID)
+		res = wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries WHERE user_id = $1 AND word_count > 0 ORDER BY created_at DESC", userID)
 	}
 
 	defer res.Close()
