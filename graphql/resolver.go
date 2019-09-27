@@ -44,13 +44,12 @@ type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
 	user := &User{
-		FirebaseID: input.FirebaseID,
-		FirstName:  input.FirstName,
-		LastName:   input.LastName,
-		Email:      input.Email,
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		Email:     input.Email,
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (firebase_id, first_name, last_name, email) VALUES ($1, $2, $3, $4) RETURNING id", user.FirebaseID, user.FirstName, user.LastName, user.Email)
+	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (first_name, last_name, email) VALUES ($1, $2, $3, $4) RETURNING id", user.FirstName, user.LastName, user.Email)
 	fmt.Println(res)
 	if err := res.Scan(&user.ID); err != nil {
 		panic(err)
