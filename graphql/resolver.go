@@ -6,7 +6,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
+	stripe "github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/customer"
 	wrabitDB "github.com/writewithwrabit/server/db"
 )
 
@@ -43,13 +46,25 @@ func (r *Resolver) Entry() EntryResolver {
 type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
+	// Initialize Stripe
+	stripe.Key = os.Getenv("STRIPE_KEY")
+
 	user := &User{
 		FirstName: input.FirstName,
 		LastName:  input.LastName,
 		Email:     input.Email,
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (first_name, last_name, email) VALUES ($1, $2, $3, $4) RETURNING id", user.FirstName, user.LastName, user.Email)
+	params := &stripe.CustomerParams{
+		Name:  stripe.String(user.FirstName),
+		Email: stripe.String(user.Email),
+	}
+	cus, err := customer.New(params)
+	if err != nil {
+		panic(err)
+	}
+
+	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (first_name, last_name, email, stripe_id) VALUES ($1, $2, $3, $4) RETURNING id", user.FirstName, user.LastName, user.Email, cus.ID)
 	fmt.Println(res)
 	if err := res.Scan(&user.ID); err != nil {
 		panic(err)
