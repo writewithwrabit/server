@@ -1,6 +1,7 @@
 type User {
   id: ID!
   firebaseID: String!
+  stripeID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -37,7 +38,6 @@ type Query {
 }
 
 input NewUser {
-  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!

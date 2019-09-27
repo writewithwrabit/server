@@ -22,15 +22,15 @@ type NewEntry struct {
 }
 
 type NewUser struct {
-	FirebaseID string  `json:"firebaseID"`
-	FirstName  string  `json:"firstName"`
-	LastName   *string `json:"lastName"`
-	Email      string  `json:"email"`
+	FirstName string  `json:"firstName"`
+	LastName  *string `json:"lastName"`
+	Email     string  `json:"email"`
 }
 
 type User struct {
 	ID         string  `json:"id"`
 	FirebaseID string  `json:"firebaseID"`
+	StripeID   string  `json:"stripeID"`
 	FirstName  string  `json:"firstName"`
 	LastName   *string `json:"lastName"`
 	Email      string  `json:"email"`

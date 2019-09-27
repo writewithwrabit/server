@@ -85,6 +85,7 @@ type ComplexityRoot struct {
 		FirstName  func(childComplexity int) int
 		ID         func(childComplexity int) int
 		LastName   func(childComplexity int) int
+		StripeID   func(childComplexity int) int
 		UpdatedAt  func(childComplexity int) int
 		WordGoal   func(childComplexity int) int
 	}
@@ -366,6 +367,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.LastName(childComplexity), true
 
+	case "User.stripeID":
+		if e.complexity.User.StripeID == nil {
+			break
+		}
+
+		return e.complexity.User.StripeID(childComplexity), true
+
 	case "User.updatedAt":
 		if e.complexity.User.UpdatedAt == nil {
 			break
@@ -445,6 +453,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
 	&ast.Source{Name: "schema.graphql", Input: `type User {
   id: ID!
   firebaseID: String!
+  stripeID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -481,7 +490,6 @@ type Query {
 }
 
 input NewUser {
-  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
@@ -1727,6 +1735,43 @@ func (ec *executionContext) _User_firebaseID(ctx context.Context, field graphql.
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.FirebaseID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_stripeID(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StripeID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3216,12 +3261,6 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 
 	for k, v := range asMap {
 		switch k {
-		case "firebaseID":
-			var err error
-			it.FirebaseID, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "firstName":
 			var err error
 			it.FirstName, err = ec.unmarshalNString2string(ctx, v)
@@ -3545,6 +3584,11 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "firebaseID":
 			out.Values[i] = ec._User_firebaseID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "stripeID":
+			out.Values[i] = ec._User_stripeID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
