@@ -21,6 +21,12 @@ type NewEntry struct {
 	Content   string `json:"content"`
 }
 
+type NewSubscription struct {
+	StripeID       string `json:"stripeId"`
+	TokenID        string `json:"tokenId"`
+	SubscriptionID string `json:"subscriptionId"`
+}
+
 type NewUser struct {
 	FirstName string  `json:"firstName"`
 	LastName  *string `json:"lastName"`

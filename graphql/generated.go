@@ -64,10 +64,11 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateEditor func(childComplexity int, input NewEditor) int
-		CreateEntry  func(childComplexity int, input NewEntry) int
-		CreateUser   func(childComplexity int, input NewUser) int
-		UpdateEntry  func(childComplexity int, id string, input ExistingEntry) int
+		CreateEditor       func(childComplexity int, input NewEditor) int
+		CreateEntry        func(childComplexity int, input NewEntry) int
+		CreateSubscription func(childComplexity int, input NewSubscription) int
+		CreateUser         func(childComplexity int, input NewUser) int
+		UpdateEntry        func(childComplexity int, id string, input ExistingEntry) int
 	}
 
 	Query struct {
@@ -102,6 +103,7 @@ type MutationResolver interface {
 	CreateEntry(ctx context.Context, input NewEntry) (*Entry, error)
 	UpdateEntry(ctx context.Context, id string, input ExistingEntry) (*Entry, error)
 	CreateEditor(ctx context.Context, input NewEditor) (*Editor, error)
+	CreateSubscription(ctx context.Context, input NewSubscription) (string, error)
 }
 type QueryResolver interface {
 	User(ctx context.Context, firebaseID *string) (*User, error)
@@ -240,6 +242,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateEntry(childComplexity, args["input"].(NewEntry)), true
+
+	case "Mutation.createSubscription":
+		if e.complexity.Mutation.CreateSubscription == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createSubscription_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateSubscription(childComplexity, args["input"].(NewSubscription)), true
 
 	case "Mutation.createUser":
 		if e.complexity.Mutation.CreateUser == nil {
@@ -514,11 +528,18 @@ input NewEditor {
   showCounter: Boolean!
 }
 
+input NewSubscription {
+  stripeId: String!
+  tokenId: String!
+  subscriptionId: String!
+}
+
 type Mutation {
   createUser(input: NewUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
+  createSubscription(input: NewSubscription!): String!
 }`},
 )
 
@@ -546,6 +567,20 @@ func (ec *executionContext) field_Mutation_createEntry_args(ctx context.Context,
 	var arg0 NewEntry
 	if tmp, ok := rawArgs["input"]; ok {
 		arg0, err = ec.unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEntry(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createSubscription_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 NewSubscription
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNNewSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewSubscription(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1381,6 +1416,50 @@ func (ec *executionContext) _Mutation_createEditor(ctx context.Context, field gr
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_createSubscription(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createSubscription_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateSubscription(rctx, args["input"].(NewSubscription))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3255,6 +3334,36 @@ func (ec *executionContext) unmarshalInputNewEntry(ctx context.Context, obj inte
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputNewSubscription(ctx context.Context, obj interface{}) (NewSubscription, error) {
+	var it NewSubscription
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "stripeId":
+			var err error
+			it.StripeID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "tokenId":
+			var err error
+			it.TokenID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "subscriptionId":
+			var err error
+			it.SubscriptionID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj interface{}) (NewUser, error) {
 	var it NewUser
 	var asMap = obj.(map[string]interface{})
@@ -3452,6 +3561,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createEditor":
 			out.Values[i] = ec._Mutation_createEditor(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createSubscription":
+			out.Values[i] = ec._Mutation_createSubscription(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4029,6 +4143,10 @@ func (ec *executionContext) unmarshalNNewEditor2githubᚗcomᚋwritewithwrabit�
 
 func (ec *executionContext) unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEntry(ctx context.Context, v interface{}) (NewEntry, error) {
 	return ec.unmarshalInputNewEntry(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNNewSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewSubscription(ctx context.Context, v interface{}) (NewSubscription, error) {
+	return ec.unmarshalInputNewSubscription(ctx, v)
 }
 
 func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewUser(ctx context.Context, v interface{}) (NewUser, error) {

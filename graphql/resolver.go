@@ -9,7 +9,9 @@ import (
 	"os"
 
 	stripe "github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/card"
 	"github.com/stripe/stripe-go/customer"
+	"github.com/stripe/stripe-go/sub"
 	wrabitDB "github.com/writewithwrabit/server/db"
 )
 
@@ -71,6 +73,38 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User
 	}
 
 	return user, nil
+}
+
+func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubscription) (string, error) {
+	// Initialize Stripe
+	stripe.Key = os.Getenv("STRIPE_KEY")
+
+	cardParams := &stripe.CardParams{
+		Customer: stripe.String(input.StripeID),
+		Token:    stripe.String(input.TokenID),
+	}
+
+	_, err := card.New(cardParams)
+	if err != nil {
+		panic(err)
+	}
+
+	subParams := &stripe.SubscriptionParams{
+		Customer: stripe.String(input.StripeID),
+		Items: []*stripe.SubscriptionItemsParams{
+			{
+				Plan: stripe.String(input.SubscriptionID),
+			},
+		},
+		TrialFromPlan: stripe.Bool(true),
+	}
+
+	_, err = sub.New(subParams)
+	if err != nil {
+		panic(err)
+	}
+
+	return "ok", nil
 }
 
 func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*Entry, error) {

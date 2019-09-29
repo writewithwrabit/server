@@ -62,9 +62,16 @@ input NewEditor {
   showCounter: Boolean!
 }
 
+input NewSubscription {
+  stripeId: String!
+  tokenId: String!
+  subscriptionId: String!
+}
+
 type Mutation {
   createUser(input: NewUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
+  createSubscription(input: NewSubscription!): String!
 }
