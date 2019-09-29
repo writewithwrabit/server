@@ -78,7 +78,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User
 func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", input.ID)
 
-	// TODO: Figure out how to get the createdAt and updatedAt times...
+	// TODO: Figure out why createdAt and updatedAt didn't work on this query
 	var user User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
