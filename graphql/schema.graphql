@@ -1,6 +1,7 @@
 type User {
   id: ID!
-  firebaseID: String!
+  firebaseID: String
+  stripeID: String
   firstName: String!
   lastName: String
   email: String!
@@ -29,7 +30,8 @@ type Editor {
 }
 
 type Query {
-  user(firebaseID: String): User!
+  user(ID: String): User!
+  userByFirebaseID(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
@@ -37,10 +39,19 @@ type Query {
 }
 
 input NewUser {
-  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
+}
+
+input UpdatedUser {
+  id: ID!
+  firebaseID: String
+  stripeID: String
+  firstName: String
+  lastName: String
+  email: String
+  wordGoal: Int
 }
 
 input NewEntry {
@@ -62,9 +73,17 @@ input NewEditor {
   showCounter: Boolean!
 }
 
+input NewSubscription {
+  stripeId: String!
+  tokenId: String!
+  subscriptionId: String!
+}
+
 type Mutation {
   createUser(input: NewUser!): User!
+  updateUser(input: UpdatedUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
+  createSubscription(input: NewSubscription!): String!
 }

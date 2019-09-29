@@ -1,6 +1,7 @@
 CREATE TABLE users (
   id SERIAL,
   firebase_id VARCHAR,
+  stripe_id VARCHAR,
   first_name VARCHAR,
   last_name VARCHAR,
   email VARCHAR,

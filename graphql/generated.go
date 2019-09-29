@@ -64,18 +64,21 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateEditor func(childComplexity int, input NewEditor) int
-		CreateEntry  func(childComplexity int, input NewEntry) int
-		CreateUser   func(childComplexity int, input NewUser) int
-		UpdateEntry  func(childComplexity int, id string, input ExistingEntry) int
+		CreateEditor       func(childComplexity int, input NewEditor) int
+		CreateEntry        func(childComplexity int, input NewEntry) int
+		CreateSubscription func(childComplexity int, input NewSubscription) int
+		CreateUser         func(childComplexity int, input NewUser) int
+		UpdateEntry        func(childComplexity int, id string, input ExistingEntry) int
+		UpdateUser         func(childComplexity int, input UpdatedUser) int
 	}
 
 	Query struct {
-		Editors         func(childComplexity int, id *string) int
-		Entries         func(childComplexity int, id *string) int
-		EntriesByUserID func(childComplexity int, userID string, startDate *string, endDate *string) int
-		LatestEntry     func(childComplexity int, userID string) int
-		User            func(childComplexity int, firebaseID *string) int
+		Editors          func(childComplexity int, id *string) int
+		Entries          func(childComplexity int, id *string) int
+		EntriesByUserID  func(childComplexity int, userID string, startDate *string, endDate *string) int
+		LatestEntry      func(childComplexity int, userID string) int
+		User             func(childComplexity int, id *string) int
+		UserByFirebaseID func(childComplexity int, firebaseID *string) int
 	}
 
 	User struct {
@@ -85,6 +88,7 @@ type ComplexityRoot struct {
 		FirstName  func(childComplexity int) int
 		ID         func(childComplexity int) int
 		LastName   func(childComplexity int) int
+		StripeID   func(childComplexity int) int
 		UpdatedAt  func(childComplexity int) int
 		WordGoal   func(childComplexity int) int
 	}
@@ -98,12 +102,15 @@ type EntryResolver interface {
 }
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input NewUser) (*User, error)
+	UpdateUser(ctx context.Context, input UpdatedUser) (*User, error)
 	CreateEntry(ctx context.Context, input NewEntry) (*Entry, error)
 	UpdateEntry(ctx context.Context, id string, input ExistingEntry) (*Entry, error)
 	CreateEditor(ctx context.Context, input NewEditor) (*Editor, error)
+	CreateSubscription(ctx context.Context, input NewSubscription) (string, error)
 }
 type QueryResolver interface {
-	User(ctx context.Context, firebaseID *string) (*User, error)
+	User(ctx context.Context, id *string) (*User, error)
+	UserByFirebaseID(ctx context.Context, firebaseID *string) (*User, error)
 	Editors(ctx context.Context, id *string) ([]*Editor, error)
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
@@ -240,6 +247,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateEntry(childComplexity, args["input"].(NewEntry)), true
 
+	case "Mutation.createSubscription":
+		if e.complexity.Mutation.CreateSubscription == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createSubscription_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateSubscription(childComplexity, args["input"].(NewSubscription)), true
+
 	case "Mutation.createUser":
 		if e.complexity.Mutation.CreateUser == nil {
 			break
@@ -263,6 +282,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateEntry(childComplexity, args["id"].(string), args["input"].(ExistingEntry)), true
+
+	case "Mutation.updateUser":
+		if e.complexity.Mutation.UpdateUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(UpdatedUser)), true
 
 	case "Query.editors":
 		if e.complexity.Query.Editors == nil {
@@ -322,7 +353,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["firebaseID"].(*string)), true
+		return e.complexity.Query.User(childComplexity, args["ID"].(*string)), true
+
+	case "Query.userByFirebaseID":
+		if e.complexity.Query.UserByFirebaseID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_userByFirebaseID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.UserByFirebaseID(childComplexity, args["firebaseID"].(*string)), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -365,6 +408,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.LastName(childComplexity), true
+
+	case "User.stripeID":
+		if e.complexity.User.StripeID == nil {
+			break
+		}
+
+		return e.complexity.User.StripeID(childComplexity), true
 
 	case "User.updatedAt":
 		if e.complexity.User.UpdatedAt == nil {
@@ -444,7 +494,8 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var parsedSchema = gqlparser.MustLoadSchema(
 	&ast.Source{Name: "schema.graphql", Input: `type User {
   id: ID!
-  firebaseID: String!
+  firebaseID: String
+  stripeID: String
   firstName: String!
   lastName: String
   email: String!
@@ -473,7 +524,8 @@ type Editor {
 }
 
 type Query {
-  user(firebaseID: String): User!
+  user(ID: String): User!
+  userByFirebaseID(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
@@ -481,10 +533,19 @@ type Query {
 }
 
 input NewUser {
-  firebaseID: String!
   firstName: String!
   lastName: String
   email: String!
+}
+
+input UpdatedUser {
+  id: ID!
+  firebaseID: String
+  stripeID: String
+  firstName: String
+  lastName: String
+  email: String
+  wordGoal: Int
 }
 
 input NewEntry {
@@ -506,12 +567,21 @@ input NewEditor {
   showCounter: Boolean!
 }
 
+input NewSubscription {
+  stripeId: String!
+  tokenId: String!
+  subscriptionId: String!
+}
+
 type Mutation {
   createUser(input: NewUser!): User!
+  updateUser(input: UpdatedUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
-}`},
+  createSubscription(input: NewSubscription!): String!
+}
+`},
 )
 
 // endregion ************************** generated!.gotpl **************************
@@ -538,6 +608,20 @@ func (ec *executionContext) field_Mutation_createEntry_args(ctx context.Context,
 	var arg0 NewEntry
 	if tmp, ok := rawArgs["input"]; ok {
 		arg0, err = ec.unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEntry(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createSubscription_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 NewSubscription
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNNewSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewSubscription(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -579,6 +663,20 @@ func (ec *executionContext) field_Mutation_updateEntry_args(ctx context.Context,
 		}
 	}
 	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 UpdatedUser
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNUpdatedUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUpdatedUser(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -668,7 +766,7 @@ func (ec *executionContext) field_Query_latestEntry_args(ctx context.Context, ra
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_userByFirebaseID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
@@ -679,6 +777,20 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["firebaseID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["ID"]; ok {
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["ID"] = arg0
 	return args, nil
 }
 
@@ -1243,6 +1355,50 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateUser_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateUser(rctx, args["input"].(UpdatedUser))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*User)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createEntry(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -1375,6 +1531,50 @@ func (ec *executionContext) _Mutation_createEditor(ctx context.Context, field gr
 	return ec.marshalNEditor2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEditor(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_createSubscription(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createSubscription_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateSubscription(rctx, args["input"].(NewSubscription))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -1401,7 +1601,51 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, args["firebaseID"].(*string))
+		return ec.resolvers.Query().User(rctx, args["ID"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*User)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_userByFirebaseID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_userByFirebaseID_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().UserByFirebaseID(rctx, args["firebaseID"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1733,15 +1977,46 @@ func (ec *executionContext) _User_firebaseID(ctx context.Context, field graphql.
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !ec.HasError(rctx) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_stripeID(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StripeID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_firstName(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
@@ -3210,18 +3485,42 @@ func (ec *executionContext) unmarshalInputNewEntry(ctx context.Context, obj inte
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputNewSubscription(ctx context.Context, obj interface{}) (NewSubscription, error) {
+	var it NewSubscription
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "stripeId":
+			var err error
+			it.StripeID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "tokenId":
+			var err error
+			it.TokenID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "subscriptionId":
+			var err error
+			it.SubscriptionID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj interface{}) (NewUser, error) {
 	var it NewUser
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
 		switch k {
-		case "firebaseID":
-			var err error
-			it.FirebaseID, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "firstName":
 			var err error
 			it.FirstName, err = ec.unmarshalNString2string(ctx, v)
@@ -3237,6 +3536,60 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 		case "email":
 			var err error
 			it.Email, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdatedUser(ctx context.Context, obj interface{}) (UpdatedUser, error) {
+	var it UpdatedUser
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "id":
+			var err error
+			it.ID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "firebaseID":
+			var err error
+			it.FirebaseID, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "stripeID":
+			var err error
+			it.StripeID, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "firstName":
+			var err error
+			it.FirstName, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lastName":
+			var err error
+			it.LastName, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "email":
+			var err error
+			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "wordGoal":
+			var err error
+			it.WordGoal, err = ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3401,6 +3754,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "updateUser":
+			out.Values[i] = ec._Mutation_updateUser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createEntry":
 			out.Values[i] = ec._Mutation_createEntry(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -3413,6 +3771,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createEditor":
 			out.Values[i] = ec._Mutation_createEditor(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createSubscription":
+			out.Values[i] = ec._Mutation_createSubscription(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -3451,6 +3814,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_user(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "userByFirebaseID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_userByFirebaseID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -3545,9 +3922,8 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "firebaseID":
 			out.Values[i] = ec._User_firebaseID(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+		case "stripeID":
+			out.Values[i] = ec._User_stripeID(ctx, field, obj)
 		case "firstName":
 			out.Values[i] = ec._User_firstName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -3987,6 +4363,10 @@ func (ec *executionContext) unmarshalNNewEntry2githubᚗcomᚋwritewithwrabitᚋ
 	return ec.unmarshalInputNewEntry(ctx, v)
 }
 
+func (ec *executionContext) unmarshalNNewSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewSubscription(ctx context.Context, v interface{}) (NewSubscription, error) {
+	return ec.unmarshalInputNewSubscription(ctx, v)
+}
+
 func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewUser(ctx context.Context, v interface{}) (NewUser, error) {
 	return ec.unmarshalInputNewUser(ctx, v)
 }
@@ -4003,6 +4383,10 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNUpdatedUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUpdatedUser(ctx context.Context, v interface{}) (UpdatedUser, error) {
+	return ec.unmarshalInputUpdatedUser(ctx, v)
 }
 
 func (ec *executionContext) marshalNUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx context.Context, sel ast.SelectionSet, v User) graphql.Marshaler {
@@ -4289,6 +4673,29 @@ func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.Se
 		return graphql.Null
 	}
 	return ec.marshalOID2string(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOInt2int(ctx context.Context, v interface{}) (int, error) {
+	return graphql.UnmarshalInt(v)
+}
+
+func (ec *executionContext) marshalOInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	return graphql.MarshalInt(v)
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOInt2int(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec.marshalOInt2int(ctx, sel, *v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
