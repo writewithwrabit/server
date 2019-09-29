@@ -75,6 +75,63 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User
 	return user, nil
 }
 
+func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*User, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", input.ID)
+
+	// TODO: Figure out how to get the createdAt and updatedAt times...
+	var user User
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+		panic(err)
+	}
+
+	firebaseID := user.FirebaseID
+	if input.FirebaseID != nil {
+		firebaseID = input.FirebaseID
+	}
+
+	stripeID := user.StripeID
+	if input.StripeID != nil {
+		stripeID = input.StripeID
+	}
+
+	firstName := user.FirstName
+	if input.FirstName != nil {
+		firstName = *input.FirstName
+	}
+
+	lastName := user.LastName
+	if input.LastName != nil {
+		lastName = input.LastName
+	}
+
+	email := user.Email
+	if input.Email != nil {
+		email = *input.Email
+	}
+
+	wordGoal := user.WordGoal
+	if input.WordGoal != nil {
+		wordGoal = *input.WordGoal
+	}
+
+	user = User{
+		ID:         input.ID,
+		FirebaseID: firebaseID,
+		StripeID:   stripeID,
+		FirstName:  firstName,
+		LastName:   lastName,
+		Email:      email,
+		WordGoal:   wordGoal,
+	}
+
+	res = wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET firebase_id = $1, stripe_id = $2, first_name = $3, last_name = $4, email = $5, word_goal = $6 WHERE id = $7 RETURNING id", user.FirebaseID, user.StripeID, user.FirstName, user.LastName, user.Email, user.WordGoal, user.ID)
+	if err := res.Scan(&user.ID); err != nil {
+		panic(err)
+	}
+
+	return &user, nil
+}
+
 func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubscription) (string, error) {
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
@@ -162,7 +219,7 @@ func (r *queryResolver) User(ctx context.Context, firebaseID *string) (*User, er
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", firebaseID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
 	}
 
@@ -278,7 +335,7 @@ func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
 
@@ -291,7 +348,7 @@ func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
 

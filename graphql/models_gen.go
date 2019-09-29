@@ -33,10 +33,20 @@ type NewUser struct {
 	Email     string  `json:"email"`
 }
 
+type UpdatedUser struct {
+	ID         string  `json:"id"`
+	FirebaseID *string `json:"firebaseID"`
+	StripeID   *string `json:"stripeID"`
+	FirstName  *string `json:"firstName"`
+	LastName   *string `json:"lastName"`
+	Email      *string `json:"email"`
+	WordGoal   *int    `json:"wordGoal"`
+}
+
 type User struct {
 	ID         string  `json:"id"`
-	FirebaseID string  `json:"firebaseID"`
-	StripeID   string  `json:"stripeID"`
+	FirebaseID *string `json:"firebaseID"`
+	StripeID   *string `json:"stripeID"`
 	FirstName  string  `json:"firstName"`
 	LastName   *string `json:"lastName"`
 	Email      string  `json:"email"`

@@ -1,7 +1,7 @@
 type User {
   id: ID!
-  firebaseID: String!
-  stripeID: String!
+  firebaseID: String
+  stripeID: String
   firstName: String!
   lastName: String
   email: String!
@@ -43,6 +43,16 @@ input NewUser {
   email: String!
 }
 
+input UpdatedUser {
+  id: ID!
+  firebaseID: String
+  stripeID: String
+  firstName: String
+  lastName: String
+  email: String
+  wordGoal: Int
+}
+
 input NewEntry {
   userId: String!
   wordCount: Int!
@@ -70,6 +80,7 @@ input NewSubscription {
 
 type Mutation {
   createUser(input: NewUser!): User!
+  updateUser(input: UpdatedUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!): Entry!
   createEditor(input: NewEditor!): Editor!
