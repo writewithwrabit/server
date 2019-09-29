@@ -24,3 +24,19 @@ The schema is currently managed by one SQL file (`wrabit.sql`). Once the databas
     ```psql
     \c wrabit
     ```
+
+## Encrypting Secrets
+
+Secrets are currently stored in a local `.env` file. In order to get them onto the CI/CD pipeline, we need [to use Travis' encrypt tool](https://docs.travis-ci.com/user/encryption-keys/).
+
+1. Zip the secrets you want into a `secrets.tar` file (which is git ignored)
+
+    ```bash
+    tar cvf secrets.tar .prod.env client-secret.json
+    ```
+
+2. Encrypt the zip with the Travis encrypt tool
+
+    ```bash
+    travis encrypt-file secrets.tar --add --com
+    ```
