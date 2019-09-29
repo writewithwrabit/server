@@ -66,6 +66,9 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User
 		panic(err)
 	}
 
+	// Add the Stripe ID so that it returns
+	user.StripeID = &cus.ID
+
 	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (first_name, last_name, email, stripe_id) VALUES ($1, $2, $3, $4) RETURNING id", user.FirstName, user.LastName, user.Email, cus.ID)
 	fmt.Println(res)
 	if err := res.Scan(&user.ID); err != nil {
@@ -215,8 +218,19 @@ func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*
 
 type queryResolver struct{ *Resolver }
 
-func (r *queryResolver) User(ctx context.Context, firebaseID *string) (*User, error) {
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", firebaseID)
+func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", id)
+
+	var user User
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+		panic(err)
+	}
+
+	return &user, nil
+}
+
+func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string) (*User, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE firebase_id = $1", firebaseID)
 
 	var user User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {

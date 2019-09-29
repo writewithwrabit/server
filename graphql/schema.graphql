@@ -30,7 +30,8 @@ type Editor {
 }
 
 type Query {
-  user(firebaseID: String): User!
+  user(ID: String): User!
+  userByFirebaseID(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!

@@ -73,11 +73,12 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Editors         func(childComplexity int, id *string) int
-		Entries         func(childComplexity int, id *string) int
-		EntriesByUserID func(childComplexity int, userID string, startDate *string, endDate *string) int
-		LatestEntry     func(childComplexity int, userID string) int
-		User            func(childComplexity int, firebaseID *string) int
+		Editors          func(childComplexity int, id *string) int
+		Entries          func(childComplexity int, id *string) int
+		EntriesByUserID  func(childComplexity int, userID string, startDate *string, endDate *string) int
+		LatestEntry      func(childComplexity int, userID string) int
+		User             func(childComplexity int, id *string) int
+		UserByFirebaseID func(childComplexity int, firebaseID *string) int
 	}
 
 	User struct {
@@ -108,7 +109,8 @@ type MutationResolver interface {
 	CreateSubscription(ctx context.Context, input NewSubscription) (string, error)
 }
 type QueryResolver interface {
-	User(ctx context.Context, firebaseID *string) (*User, error)
+	User(ctx context.Context, id *string) (*User, error)
+	UserByFirebaseID(ctx context.Context, firebaseID *string) (*User, error)
 	Editors(ctx context.Context, id *string) ([]*Editor, error)
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
@@ -351,7 +353,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["firebaseID"].(*string)), true
+		return e.complexity.Query.User(childComplexity, args["ID"].(*string)), true
+
+	case "Query.userByFirebaseID":
+		if e.complexity.Query.UserByFirebaseID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_userByFirebaseID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.UserByFirebaseID(childComplexity, args["firebaseID"].(*string)), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -510,7 +524,8 @@ type Editor {
 }
 
 type Query {
-  user(firebaseID: String): User!
+  user(ID: String): User!
+  userByFirebaseID(firebaseID: String): User!
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
@@ -751,7 +766,7 @@ func (ec *executionContext) field_Query_latestEntry_args(ctx context.Context, ra
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_userByFirebaseID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
@@ -762,6 +777,20 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["firebaseID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["ID"]; ok {
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["ID"] = arg0
 	return args, nil
 }
 
@@ -1572,7 +1601,51 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, args["firebaseID"].(*string))
+		return ec.resolvers.Query().User(rctx, args["ID"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*User)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_userByFirebaseID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_userByFirebaseID_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().UserByFirebaseID(rctx, args["firebaseID"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3741,6 +3814,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_user(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "userByFirebaseID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_userByFirebaseID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
