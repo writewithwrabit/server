@@ -21,19 +21,18 @@ type contextKey struct {
 func Middleware(client *auth.Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var token *auth.Token
 			t := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-			if len(t) != 2 || t[0] != "Bearer" {
-				http.Error(w, "Invalid token", http.StatusForbidden)
-				return
-			}
+			if len(t) == 2 || t[0] == "Bearer" {
+				var err error
+				token, err = client.VerifyIDToken(context.Background(), t[1])
+				if err != nil {
+					http.Error(w, "Invalid token", http.StatusForbidden)
+					return
+				}
 
-			token, err := client.VerifyIDToken(context.Background(), t[1])
-			if err != nil {
-				http.Error(w, "Invalid token", http.StatusForbidden)
-				return
+				log.Printf("Verified ID token", token)
 			}
-
-			log.Printf("Verified ID token")
 
 			// put it in context
 			ctx := context.WithValue(r.Context(), userCtxKey, token)
@@ -43,4 +42,10 @@ func Middleware(client *auth.Client) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// ForContext finds the user from the context. REQUIRES Middleware to have run.
+func ForContext(ctx context.Context) *auth.Token {
+	raw, _ := ctx.Value(userCtxKey).(*auth.Token)
+	return raw
 }
