@@ -31,7 +31,7 @@ func Middleware(client *auth.Client) func(http.Handler) http.Handler {
 					return
 				}
 
-				log.Printf("Verified ID token", token)
+				log.Printf("Verified ID token %v", token)
 			}
 
 			// put it in context
