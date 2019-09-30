@@ -12,6 +12,7 @@ import (
 	"github.com/stripe/stripe-go/card"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/sub"
+	"github.com/writewithwrabit/server/auth"
 	wrabitDB "github.com/writewithwrabit/server/db"
 )
 
@@ -168,6 +169,10 @@ func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubs
 }
 
 func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*Entry, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &Entry{}, fmt.Errorf("Access denied")
+	}
+
 	entry := &Entry{
 		ID:        "",
 		UserID:    input.UserID,
@@ -184,6 +189,10 @@ func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*En
 }
 
 func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input ExistingEntry) (*Entry, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &Entry{}, fmt.Errorf("Access denied")
+	}
+
 	entry := &Entry{
 		ID:        id,
 		UserID:    input.UserID,
@@ -200,6 +209,10 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 }
 
 func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*Editor, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &Editor{}, fmt.Errorf("Access denied")
+	}
+
 	editor := &Editor{
 		ID:          "",
 		UserID:      input.UserID,
@@ -219,6 +232,10 @@ func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*
 type queryResolver struct{ *Resolver }
 
 func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &User{}, fmt.Errorf("Access denied")
+	}
+
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", id)
 
 	var user User
@@ -241,6 +258,10 @@ func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string
 }
 
 func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return []*Editor{}, fmt.Errorf("Access denied")
+	}
+
 	var editors []*Editor
 
 	if id == nil {
@@ -269,6 +290,10 @@ func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, err
 }
 
 func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return []*Entry{}, fmt.Errorf("Access denied")
+	}
+
 	var entries []*Entry
 
 	if id == nil {
@@ -297,6 +322,10 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 }
 
 func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return []*Entry{}, fmt.Errorf("Access denied")
+	}
+
 	var entries []*Entry
 
 	var res *sql.Rows
@@ -324,6 +353,10 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 }
 
 func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &Entry{}, fmt.Errorf("Access denied")
+	}
+
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at BETWEEN NOW() - INTERVAL '24 HOURS' AND NOW() ORDER BY created_at DESC", userID)
 
 	fmt.Println(res)
@@ -346,6 +379,10 @@ func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry,
 type editorResolver struct{ *Resolver }
 
 func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &User{}, fmt.Errorf("Access denied")
+	}
+
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
@@ -359,6 +396,10 @@ func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
 type entryResolver struct{ *Resolver }
 
 func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &User{}, fmt.Errorf("Access denied")
+	}
+
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
 	var user User
