@@ -3,3 +3,4 @@ client-secret.json
 *.env
 env.yaml
 secrets.tar
+sqreen.yaml

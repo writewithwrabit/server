@@ -15,6 +15,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	_ "github.com/sqreen/go-agent/agent"
+	"github.com/sqreen/go-agent/sdk/middleware/sqhttp"
 	"github.com/writewithwrabit/server/auth"
 	graphql "github.com/writewithwrabit/server/graphql"
 	"google.golang.org/api/option"
@@ -74,7 +76,7 @@ func main() {
 	router.Handle("/query", handler.GraphQL(graphql.NewExecutableSchema(graphql.New(db))))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+port, sqhttp.Middleware(router)))
 }
 
 // DB gets a connection to the database.
