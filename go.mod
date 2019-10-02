@@ -10,6 +10,7 @@ require (
 	github.com/go-chi/cors v1.0.0
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.2.0
+	github.com/sqreen/go-agent v0.1.0-beta.7
 	github.com/stripe/stripe-go v63.2.2+incompatible
 	github.com/vektah/gqlparser v1.1.2
 	google.golang.org/api v0.10.0
