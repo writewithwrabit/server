@@ -54,28 +54,28 @@ func main() {
 		port = defaultPort
 	}
 
-	if env == "dev" {
-		// Only allow the playground in dev
-		router.Handle("/", handler.Playground("GraphQL playground", "/query"))
-	} else {
-		opt := option.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
-		app, err := firebase.NewApp(context.Background(), nil, opt)
-		if err != nil {
-			log.Fatalf("error initializing app: %v\n", err)
-		}
-
-		client, err := app.Auth(context.Background())
-		if err != nil {
-			log.Fatalf("error getting Auth client: %v\n", err)
-		}
-
-		// Require a token in prod
-		router.Use(auth.Middleware(client))
+	// Setup Google token verification
+	opt := option.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
 	}
+
+	client, err := app.Auth(context.Background())
+	if err != nil {
+		log.Fatalf("error getting Auth client: %v\n", err)
+	}
+
+	router.Use(auth.Middleware(client))
 
 	router.Handle("/query", handler.GraphQL(graphql.NewExecutableSchema(graphql.New(db))))
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+	if env == "dev" {
+		// Only allow the playground in dev
+		router.Handle("/", handler.Playground("GraphQL playground", "/query"))
+		log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+	}
+
 	log.Fatal(http.ListenAndServe(":"+port, sqhttp.Middleware(router)))
 }
 

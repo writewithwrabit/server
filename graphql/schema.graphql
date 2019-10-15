@@ -35,7 +35,7 @@ type Query {
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
-  latestEntry(userID: ID!): Entry!
+  dailyEntry(userID: ID!, date: String!): Entry!
 }
 
 input NewUser {
