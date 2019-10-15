@@ -352,12 +352,12 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 	return entries, nil
 }
 
-func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry, error) {
+func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date string) (*Entry, error) {
 	if user := auth.ForContext(ctx); user == nil {
 		return &Entry{}, fmt.Errorf("Access denied")
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at BETWEEN NOW() - INTERVAL '24 HOURS' AND NOW() ORDER BY created_at DESC", userID)
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, date)
 
 	fmt.Println(res)
 	var entry = new(Entry)
@@ -367,7 +367,7 @@ func (r *queryResolver) LatestEntry(ctx context.Context, userID string) (*Entry,
 	}
 
 	if err == sql.ErrNoRows {
-		res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO entries (user_id, content, word_count) VALUES ($1, $2, $3) RETURNING id", userID, "", 0)
+		res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO entries (user_id, content, word_count, created_at) VALUES ($1, $2, $3, $4) RETURNING id", userID, "", 0, date)
 		if err := res.Scan(&entry.ID); err != nil {
 			panic(err)
 		}

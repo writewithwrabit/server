@@ -73,10 +73,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		DailyEntry       func(childComplexity int, userID string, date string) int
 		Editors          func(childComplexity int, id *string) int
 		Entries          func(childComplexity int, id *string) int
 		EntriesByUserID  func(childComplexity int, userID string, startDate *string, endDate *string) int
-		LatestEntry      func(childComplexity int, userID string) int
 		User             func(childComplexity int, id *string) int
 		UserByFirebaseID func(childComplexity int, firebaseID *string) int
 	}
@@ -114,7 +114,7 @@ type QueryResolver interface {
 	Editors(ctx context.Context, id *string) ([]*Editor, error)
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
-	LatestEntry(ctx context.Context, userID string) (*Entry, error)
+	DailyEntry(ctx context.Context, userID string, date string) (*Entry, error)
 }
 
 type executableSchema struct {
@@ -295,6 +295,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(UpdatedUser)), true
 
+	case "Query.dailyEntry":
+		if e.complexity.Query.DailyEntry == nil {
+			break
+		}
+
+		args, err := ec.field_Query_dailyEntry_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.DailyEntry(childComplexity, args["userID"].(string), args["date"].(string)), true
+
 	case "Query.editors":
 		if e.complexity.Query.Editors == nil {
 			break
@@ -330,18 +342,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.EntriesByUserID(childComplexity, args["userID"].(string), args["startDate"].(*string), args["endDate"].(*string)), true
-
-	case "Query.latestEntry":
-		if e.complexity.Query.LatestEntry == nil {
-			break
-		}
-
-		args, err := ec.field_Query_latestEntry_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.LatestEntry(childComplexity, args["userID"].(string)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -529,7 +529,7 @@ type Query {
   editors(ID: ID): [Editor!]!
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
-  latestEntry(userID: ID!): Entry!
+  dailyEntry(userID: ID!, date: String!): Entry!
 }
 
 input NewUser {
@@ -694,6 +694,28 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_dailyEntry_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["userID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["date"]; ok {
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["date"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_editors_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -749,20 +771,6 @@ func (ec *executionContext) field_Query_entries_args(ctx context.Context, rawArg
 		}
 	}
 	args["ID"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_latestEntry_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["userID"]; ok {
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["userID"] = arg0
 	return args, nil
 }
 
@@ -1795,7 +1803,7 @@ func (ec *executionContext) _Query_entriesByUserID(ctx context.Context, field gr
 	return ec.marshalNEntry2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Query_latestEntry(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_dailyEntry(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -1812,7 +1820,7 @@ func (ec *executionContext) _Query_latestEntry(ctx context.Context, field graphq
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_latestEntry_args(ctx, rawArgs)
+	args, err := ec.field_Query_dailyEntry_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1821,7 +1829,7 @@ func (ec *executionContext) _Query_latestEntry(ctx context.Context, field graphq
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().LatestEntry(rctx, args["userID"].(string))
+		return ec.resolvers.Query().DailyEntry(rctx, args["userID"].(string), args["date"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3875,7 +3883,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
-		case "latestEntry":
+		case "dailyEntry":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -3883,7 +3891,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_latestEntry(ctx, field)
+				res = ec._Query_dailyEntry(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
