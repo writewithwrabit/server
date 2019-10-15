@@ -33,6 +33,7 @@ CREATE TABLE streaks (
   id SERIAL,
   user_id VARCHAR,
   day_count INT,
+  last_entry_id INT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

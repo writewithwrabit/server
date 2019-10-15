@@ -6,6 +6,7 @@ type ExistingEntry struct {
 	UserID    string `json:"userID"`
 	WordCount int    `json:"wordCount"`
 	Content   string `json:"content"`
+	GoalHit   bool   `json:"goalHit"`
 }
 
 type NewEditor struct {

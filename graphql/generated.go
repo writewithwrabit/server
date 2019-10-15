@@ -38,6 +38,7 @@ type ResolverRoot interface {
 	Entry() EntryResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Streak() StreakResolver
 }
 
 type DirectiveRoot struct {
@@ -68,7 +69,7 @@ type ComplexityRoot struct {
 		CreateEntry        func(childComplexity int, input NewEntry) int
 		CreateSubscription func(childComplexity int, input NewSubscription) int
 		CreateUser         func(childComplexity int, input NewUser) int
-		UpdateEntry        func(childComplexity int, id string, input ExistingEntry) int
+		UpdateEntry        func(childComplexity int, id string, input ExistingEntry, date string) int
 		UpdateUser         func(childComplexity int, input UpdatedUser) int
 	}
 
@@ -79,6 +80,15 @@ type ComplexityRoot struct {
 		EntriesByUserID  func(childComplexity int, userID string, startDate *string, endDate *string) int
 		User             func(childComplexity int, id *string) int
 		UserByFirebaseID func(childComplexity int, firebaseID *string) int
+	}
+
+	Streak struct {
+		CreatedAt   func(childComplexity int) int
+		DayCount    func(childComplexity int) int
+		ID          func(childComplexity int) int
+		LastEntryID func(childComplexity int) int
+		UpdatedAt   func(childComplexity int) int
+		User        func(childComplexity int) int
 	}
 
 	User struct {
@@ -104,7 +114,7 @@ type MutationResolver interface {
 	CreateUser(ctx context.Context, input NewUser) (*User, error)
 	UpdateUser(ctx context.Context, input UpdatedUser) (*User, error)
 	CreateEntry(ctx context.Context, input NewEntry) (*Entry, error)
-	UpdateEntry(ctx context.Context, id string, input ExistingEntry) (*Entry, error)
+	UpdateEntry(ctx context.Context, id string, input ExistingEntry, date string) (*Entry, error)
 	CreateEditor(ctx context.Context, input NewEditor) (*Editor, error)
 	CreateSubscription(ctx context.Context, input NewSubscription) (string, error)
 }
@@ -115,6 +125,11 @@ type QueryResolver interface {
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
 	DailyEntry(ctx context.Context, userID string, date string) (*Entry, error)
+}
+type StreakResolver interface {
+	User(ctx context.Context, obj *Streak) (*User, error)
+
+	LastEntryID(ctx context.Context, obj *Streak) (string, error)
 }
 
 type executableSchema struct {
@@ -281,7 +296,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateEntry(childComplexity, args["id"].(string), args["input"].(ExistingEntry)), true
+		return e.complexity.Mutation.UpdateEntry(childComplexity, args["id"].(string), args["input"].(ExistingEntry), args["date"].(string)), true
 
 	case "Mutation.updateUser":
 		if e.complexity.Mutation.UpdateUser == nil {
@@ -366,6 +381,48 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.UserByFirebaseID(childComplexity, args["firebaseID"].(*string)), true
+
+	case "Streak.createdAt":
+		if e.complexity.Streak.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Streak.CreatedAt(childComplexity), true
+
+	case "Streak.dayCount":
+		if e.complexity.Streak.DayCount == nil {
+			break
+		}
+
+		return e.complexity.Streak.DayCount(childComplexity), true
+
+	case "Streak.id":
+		if e.complexity.Streak.ID == nil {
+			break
+		}
+
+		return e.complexity.Streak.ID(childComplexity), true
+
+	case "Streak.lastEntryID":
+		if e.complexity.Streak.LastEntryID == nil {
+			break
+		}
+
+		return e.complexity.Streak.LastEntryID(childComplexity), true
+
+	case "Streak.updatedAt":
+		if e.complexity.Streak.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Streak.UpdatedAt(childComplexity), true
+
+	case "Streak.User":
+		if e.complexity.Streak.User == nil {
+			break
+		}
+
+		return e.complexity.Streak.User(childComplexity), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -523,6 +580,15 @@ type Editor {
   updatedAt: String!
 }
 
+type Streak {
+  id: ID!
+  User: User!
+  dayCount: Int!
+  lastEntryID: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
 type Query {
   user(ID: String): User!
   userByFirebaseID(firebaseID: String): User!
@@ -558,6 +624,7 @@ input ExistingEntry {
   userID: String!
   wordCount: Int!
   content: String!
+  goalHit: Boolean!
 }
 
 input NewEditor {
@@ -577,7 +644,7 @@ type Mutation {
   createUser(input: NewUser!): User!
   updateUser(input: UpdatedUser!): User!
   createEntry(input: NewEntry!): Entry!
-  updateEntry(id: ID!, input: ExistingEntry!): Entry!
+  updateEntry(id: ID!, input: ExistingEntry!, date: String!): Entry!
   createEditor(input: NewEditor!): Editor!
   createSubscription(input: NewSubscription!): String!
 }
@@ -663,6 +730,14 @@ func (ec *executionContext) field_Mutation_updateEntry_args(ctx context.Context,
 		}
 	}
 	args["input"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["date"]; ok {
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["date"] = arg2
 	return args, nil
 }
 
@@ -1477,7 +1552,7 @@ func (ec *executionContext) _Mutation_updateEntry(ctx context.Context, field gra
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateEntry(rctx, args["id"].(string), args["input"].(ExistingEntry))
+		return ec.resolvers.Mutation().UpdateEntry(rctx, args["id"].(string), args["input"].(ExistingEntry), args["date"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1920,6 +1995,228 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Streak_id(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Streak",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Streak_User(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Streak",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Streak().User(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*User)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Streak_dayCount(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Streak",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DayCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Streak_lastEntryID(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Streak",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Streak().LastEntryID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Streak_createdAt(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Streak",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Streak_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Streak",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
@@ -3421,6 +3718,12 @@ func (ec *executionContext) unmarshalInputExistingEntry(ctx context.Context, obj
 			if err != nil {
 				return it, err
 			}
+		case "goalHit":
+			var err error
+			it.GoalHit, err = ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -3901,6 +4204,76 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
 			out.Values[i] = ec._Query___schema(ctx, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var streakImplementors = []string{"Streak"}
+
+func (ec *executionContext) _Streak(ctx context.Context, sel ast.SelectionSet, obj *Streak) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, streakImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Streak")
+		case "id":
+			out.Values[i] = ec._Streak_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "User":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Streak_User(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "dayCount":
+			out.Values[i] = ec._Streak_dayCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "lastEntryID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Streak_lastEntryID(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "createdAt":
+			out.Values[i] = ec._Streak_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Streak_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

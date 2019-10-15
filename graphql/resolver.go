@@ -46,6 +46,10 @@ func (r *Resolver) Entry() EntryResolver {
 	return &entryResolver{r}
 }
 
+func (r *Resolver) Streak() StreakResolver {
+	return &streakResolver{r}
+}
+
 type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
@@ -188,8 +192,9 @@ func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*En
 	return entry, nil
 }
 
-func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input ExistingEntry) (*Entry, error) {
-	if user := auth.ForContext(ctx); user == nil {
+func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input ExistingEntry, date string) (*Entry, error) {
+	user := auth.ForContext(ctx)
+	if user == nil || user.Subject != input.UserID {
 		return &Entry{}, fmt.Errorf("Access denied")
 	}
 
@@ -203,6 +208,31 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE entries SET content = $1, word_count = $2 WHERE id = $3 AND user_id = $4 RETURNING id", entry.Content, entry.WordCount, entry.ID, entry.UserID)
 	if err := res.Scan(&entry.ID); err != nil {
 		panic(err)
+	}
+
+	// TODO: Move this logic into a sane place
+	if input.GoalHit {
+		// Get the latest streak for the user
+		res := wrabitDB.LogAndQueryRow(r.db, "SELECT ID, user_id, day_count, last_entry_id FROM streaks WHERE user_id = $1 AND updated_at >= $2::timestamp - INTERVAL '1 DAY' ORDER BY created_at DESC LIMIT 1", entry.UserID, date)
+
+		var streak = new(Streak)
+		err := res.Scan(&streak.ID, &streak.UserID, &streak.DayCount, &streak.LastEntryID)
+		if err != nil && err != sql.ErrNoRows {
+			panic(err)
+		}
+
+		// If no streak exists, create one
+		if err == sql.ErrNoRows {
+			res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO streaks (user_id, day_count, last_entry_id) VALUES ($1, $2, $3) RETURNING id", entry.UserID, 1, entry.ID)
+			if err := res.Scan(&entry.ID); err != nil {
+				panic(err)
+			}
+		} else if streak != nil && streak.LastEntryID != entry.ID {
+			res := wrabitDB.LogAndQueryRow(r.db, "UPDATE streaks SET last_entry_id = $1, day_count = day_count + 1 WHERE id = $2 AND user_id = $3 RETURNING id", entry.ID, streak.ID, entry.UserID)
+			if err := res.Scan(&entry.ID); err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	return entry, nil
@@ -359,7 +389,6 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, date)
 
-	fmt.Println(res)
 	var entry = new(Entry)
 	err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt)
 	if err != nil && err != sql.ErrNoRows {
@@ -408,4 +437,25 @@ func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+type streakResolver struct{ *Resolver }
+
+func (r *streakResolver) User(ctx context.Context, obj *Streak) (*User, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return &User{}, fmt.Errorf("Access denied")
+	}
+
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
+
+	var user User
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		panic(err)
+	}
+
+	return &user, nil
+}
+
+func (r *streakResolver) LastEntryID(ctx context.Context, obj *Streak) (string, error) {
+	return obj.LastEntryID, nil
 }
