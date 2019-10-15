@@ -14,6 +14,8 @@ models:
     model: github.com/writewithwrabit/server/graphql.Editor
   Entry:
     model: github.com/writewithwrabit/server/graphql.Entry
+  Streak:
+    model: github.com/writewithwrabit/server/graphql.Streak
 resolver:
   filename: resolver.go
   type: Resolver

@@ -29,6 +29,15 @@ type Editor {
   updatedAt: String!
 }
 
+type Streak {
+  id: ID!
+  User: User!
+  dayCount: Int!
+  lastEntryID: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
 type Query {
   user(ID: String): User!
   userByFirebaseID(firebaseID: String): User!
@@ -64,6 +73,7 @@ input ExistingEntry {
   userID: String!
   wordCount: Int!
   content: String!
+  goalHit: Boolean!
 }
 
 input NewEditor {
@@ -83,7 +93,7 @@ type Mutation {
   createUser(input: NewUser!): User!
   updateUser(input: UpdatedUser!): User!
   createEntry(input: NewEntry!): Entry!
-  updateEntry(id: ID!, input: ExistingEntry!): Entry!
+  updateEntry(id: ID!, input: ExistingEntry!, date: String!): Entry!
   createEditor(input: NewEditor!): Editor!
   createSubscription(input: NewSubscription!): String!
 }
