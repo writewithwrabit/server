@@ -74,9 +74,12 @@ func main() {
 		// Only allow the playground in dev
 		router.Handle("/", handler.Playground("GraphQL playground", "/query"))
 		log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+
+		log.Fatal(http.ListenAndServe(":"+port, router))
+	} else {
+		log.Fatal(http.ListenAndServe(":"+port, sqhttp.Middleware(router)))
 	}
 
-	log.Fatal(http.ListenAndServe(":"+port, sqhttp.Middleware(router)))
 }
 
 // DB gets a connection to the database.
