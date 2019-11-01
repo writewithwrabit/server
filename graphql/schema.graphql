@@ -15,6 +15,7 @@ type Entry {
   User: User!
   wordCount: Int!
   content: String!
+  goalHit: Boolean!
   createdAt: String!
   updatedAt: String!
 }

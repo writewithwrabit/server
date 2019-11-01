@@ -25,6 +25,7 @@ CREATE TABLE entries (
   user_id VARCHAR,
   word_count INT,
   content TEXT,
+  goal_hit BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

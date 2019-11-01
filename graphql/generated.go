@@ -58,6 +58,7 @@ type ComplexityRoot struct {
 	Entry struct {
 		Content   func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
+		GoalHit   func(childComplexity int) int
 		ID        func(childComplexity int) int
 		UpdatedAt func(childComplexity int) int
 		User      func(childComplexity int) int
@@ -109,6 +110,8 @@ type EditorResolver interface {
 }
 type EntryResolver interface {
 	User(ctx context.Context, obj *Entry) (*User, error)
+
+	GoalHit(ctx context.Context, obj *Entry) (bool, error)
 }
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input NewUser) (*User, error)
@@ -128,8 +131,6 @@ type QueryResolver interface {
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
-
-	LastEntryID(ctx context.Context, obj *Streak) (string, error)
 }
 
 type executableSchema struct {
@@ -209,6 +210,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Entry.CreatedAt(childComplexity), true
+
+	case "Entry.goalHit":
+		if e.complexity.Entry.GoalHit == nil {
+			break
+		}
+
+		return e.complexity.Entry.GoalHit(childComplexity), true
 
 	case "Entry.id":
 		if e.complexity.Entry.ID == nil {
@@ -566,6 +574,7 @@ type Entry {
   User: User!
   wordCount: Int!
   content: String!
+  goalHit: Boolean!
   createdAt: String!
   updatedAt: String!
 }
@@ -1318,6 +1327,43 @@ func (ec *executionContext) _Entry_content(ctx context.Context, field graphql.Co
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Entry_goalHit(ctx context.Context, field graphql.CollectedField, obj *Entry) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Entry",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entry().GoalHit(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Entry_createdAt(ctx context.Context, field graphql.CollectedField, obj *Entry) (ret graphql.Marshaler) {
@@ -2121,13 +2167,13 @@ func (ec *executionContext) _Streak_lastEntryID(ctx context.Context, field graph
 		Object:   "Streak",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Streak().LastEntryID(rctx, obj)
+		return obj.LastEntryID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4024,6 +4070,20 @@ func (ec *executionContext) _Entry(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "goalHit":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entry_goalHit(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "createdAt":
 			out.Values[i] = ec._Entry_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4251,19 +4311,10 @@ func (ec *executionContext) _Streak(ctx context.Context, sel ast.SelectionSet, o
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "lastEntryID":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Streak_lastEntryID(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._Streak_lastEntryID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "createdAt":
 			out.Values[i] = ec._Streak_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
