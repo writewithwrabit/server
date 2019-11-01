@@ -203,9 +203,10 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		UserID:    input.UserID,
 		Content:   input.Content,
 		WordCount: input.WordCount,
+		GoalHit:   input.GoalHit,
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE entries SET content = $1, word_count = $2 WHERE id = $3 AND user_id = $4 RETURNING id", entry.Content, entry.WordCount, entry.ID, entry.UserID)
+	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE entries SET content = $1, word_count = $2, goal_hit = $3 WHERE id = $4 AND user_id = $5 RETURNING id", entry.Content, entry.WordCount, entry.GoalHit, entry.ID, entry.UserID)
 	if err := res.Scan(&entry.ID); err != nil {
 		panic(err)
 	}
@@ -341,7 +342,7 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE id = $1", id)
 
 		var entry = new(Entry)
-		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt, &entry.GoalHit); err != nil {
 			panic(err)
 		}
 
@@ -372,7 +373,7 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 	defer res.Close()
 	for res.Next() {
 		var entry = new(Entry)
-		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt, &entry.GoalHit); err != nil {
 			panic(err)
 		}
 
@@ -390,7 +391,7 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, date)
 
 	var entry = new(Entry)
-	err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt)
+	err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt, &entry.GoalHit)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
@@ -437,6 +438,10 @@ func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (r *entryResolver) GoalHit(ctx context.Context, obj *Entry) (bool, error) {
+	return obj.GoalHit, nil
 }
 
 type streakResolver struct{ *Resolver }
