@@ -59,7 +59,7 @@ type Query {
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
-  stats(global: Boolean): Stats!
+  stats(global: Boolean!): Stats!
 }
 
 input NewUser {

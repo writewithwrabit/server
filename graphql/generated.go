@@ -84,7 +84,7 @@ type ComplexityRoot struct {
 		Editors          func(childComplexity int, id *string) int
 		Entries          func(childComplexity int, id *string) int
 		EntriesByUserID  func(childComplexity int, userID string, startDate *string, endDate *string) int
-		Stats            func(childComplexity int, global *bool) int
+		Stats            func(childComplexity int, global bool) int
 		User             func(childComplexity int, id *string) int
 		UserByFirebaseID func(childComplexity int, firebaseID *string) int
 	}
@@ -140,7 +140,7 @@ type QueryResolver interface {
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
 	DailyEntry(ctx context.Context, userID string, date string) (*Entry, error)
-	Stats(ctx context.Context, global *bool) (*Stats, error)
+	Stats(ctx context.Context, global bool) (*Stats, error)
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
@@ -403,7 +403,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Stats(childComplexity, args["global"].(*bool)), true
+		return e.complexity.Query.Stats(childComplexity, args["global"].(bool)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -692,7 +692,7 @@ type Query {
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
-  stats(global: Boolean): Stats!
+  stats(global: Boolean!): Stats!
 }
 
 input NewUser {
@@ -949,9 +949,9 @@ func (ec *executionContext) field_Query_entries_args(ctx context.Context, rawArg
 func (ec *executionContext) field_Query_stats_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *bool
+	var arg0 bool
 	if tmp, ok := rawArgs["global"]; ok {
-		arg0, err = ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
+		arg0, err = ec.unmarshalNBoolean2bool(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2170,7 +2170,7 @@ func (ec *executionContext) _Query_stats(ctx context.Context, field graphql.Coll
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Stats(rctx, args["global"].(*bool))
+		return ec.resolvers.Query().Stats(rctx, args["global"].(bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

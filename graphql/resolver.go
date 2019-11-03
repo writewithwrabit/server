@@ -406,7 +406,7 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 	return entry, nil
 }
 
-func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error) {
+func (r *queryResolver) Stats(ctx context.Context, global bool) (*Stats, error) {
 	user := auth.ForContext(ctx)
 	if user == nil {
 		return &Stats{}, fmt.Errorf("Access denied")
@@ -416,7 +416,7 @@ func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error)
 
 	var res = new(sql.Row)
 	wordsWrittenQuery := "SELECT sum(word_count) as words_written FROM entries"
-	if global != nil {
+	if global {
 		res = wrabitDB.LogAndQueryRow(r.db, wordsWrittenQuery)
 	} else {
 		wordsWrittenQuery = wordsWrittenQuery + " WHERE user_id = $1"
@@ -428,7 +428,7 @@ func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error)
 	}
 
 	longestEntryQuery := "SELECT max(word_count) as longest_entry FROM entries"
-	if global != nil {
+	if global {
 		res = wrabitDB.LogAndQueryRow(r.db, longestEntryQuery)
 	} else {
 		longestEntryQuery = longestEntryQuery + " WHERE user_id = $1"
@@ -440,7 +440,7 @@ func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error)
 	}
 
 	longestStreakQuery := "SELECT max(day_count) as longest_streak FROM streaks"
-	if global != nil {
+	if global {
 		res = wrabitDB.LogAndQueryRow(r.db, longestStreakQuery)
 	} else {
 		longestStreakQuery = longestStreakQuery + " WHERE user_id = $1"
@@ -452,7 +452,7 @@ func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error)
 	}
 
 	preferredDayOfWeekQuery := "SELECT preferred_day_of_week FROM (SELECT date_part('dow', updated_at) as preferred_day_of_week FROM entries) sub GROUP BY 1 ORDER BY count(*) DESC LIMIT 1"
-	if global != nil {
+	if global {
 		res = wrabitDB.LogAndQueryRow(r.db, preferredDayOfWeekQuery)
 	} else {
 		preferredDayOfWeekQuery = "SELECT preferred_day_of_week FROM (SELECT date_part('dow', updated_at) as preferred_day_of_week FROM entries WHERE user_id = $1) sub GROUP BY 1 ORDER BY count(*) DESC LIMIT 1"
@@ -465,7 +465,7 @@ func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error)
 
 	var resTimes = new(sql.Rows)
 	preferredWritingTimesQuery := "SELECT hour, count(*) FROM (SELECT date_part('hour', updated_at) as hour FROM entries) sub GROUP BY 1 ORDER BY 2 DESC"
-	if global != nil {
+	if global {
 		resTimes = wrabitDB.LogAndQuery(r.db, preferredWritingTimesQuery)
 	} else {
 		preferredWritingTimesQuery := "SELECT hour, count(*) FROM (SELECT date_part('hour', updated_at) as hour FROM entries WHERE user_id = $1) sub GROUP BY 1 ORDER BY 2 DESC"
