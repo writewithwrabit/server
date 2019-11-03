@@ -407,33 +407,70 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 }
 
 func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return &Stats{}, fmt.Errorf("Access denied")
+	}
+
 	var stats = new(Stats)
 
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT sum(word_count) as words_written FROM entries")
+	var res = new(sql.Row)
+	wordsWrittenQuery := "SELECT sum(word_count) as words_written FROM entries"
+	if global != nil {
+		res = wrabitDB.LogAndQueryRow(r.db, wordsWrittenQuery)
+	} else {
+		wordsWrittenQuery = wordsWrittenQuery + " WHERE user_id = $1"
+		res = wrabitDB.LogAndQueryRow(r.db, wordsWrittenQuery, user.Subject)
+	}
 	err := res.Scan(&stats.WordsWritten)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT max(word_count) as longest_entry FROM entries")
+	longestEntryQuery := "SELECT max(word_count) as longest_entry FROM entries"
+	if global != nil {
+		res = wrabitDB.LogAndQueryRow(r.db, longestEntryQuery)
+	} else {
+		longestEntryQuery = longestEntryQuery + " WHERE user_id = $1"
+		res = wrabitDB.LogAndQueryRow(r.db, longestEntryQuery, user.Subject)
+	}
 	err = res.Scan(&stats.LongestEntry)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT max(day_count) as longest_streak FROM streaks")
+	longestStreakQuery := "SELECT max(day_count) as longest_streak FROM streaks"
+	if global != nil {
+		res = wrabitDB.LogAndQueryRow(r.db, longestStreakQuery)
+	} else {
+		longestStreakQuery = longestStreakQuery + " WHERE user_id = $1"
+		res = wrabitDB.LogAndQueryRow(r.db, longestStreakQuery, user.Subject)
+	}
 	err = res.Scan(&stats.LongestStreak)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT preferred_day_of_week  FROM (SELECT date_part('dow', updated_at) as preferred_day_of_week FROM entries) sub GROUP BY 1 ORDER BY count(*) DESC LIMIT 1")
+	preferredDayOfWeekQuery := "SELECT preferred_day_of_week FROM (SELECT date_part('dow', updated_at) as preferred_day_of_week FROM entries) sub GROUP BY 1 ORDER BY count(*) DESC LIMIT 1"
+	if global != nil {
+		res = wrabitDB.LogAndQueryRow(r.db, preferredDayOfWeekQuery)
+	} else {
+		preferredDayOfWeekQuery = "SELECT preferred_day_of_week FROM (SELECT date_part('dow', updated_at) as preferred_day_of_week FROM entries WHERE user_id = $1) sub GROUP BY 1 ORDER BY count(*) DESC LIMIT 1"
+		res = wrabitDB.LogAndQueryRow(r.db, preferredDayOfWeekQuery, user.Subject)
+	}
 	err = res.Scan(&stats.PreferredDayOfWeek)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
-	resTimes := wrabitDB.LogAndQuery(r.db, "SELECT hour, count(*) FROM (SELECT date_part('hour', updated_at) as hour FROM entries) sub GROUP BY 1 ORDER BY 2 DESC")
+	var resTimes = new(sql.Rows)
+	preferredWritingTimesQuery := "SELECT hour, count(*) FROM (SELECT date_part('hour', updated_at) as hour FROM entries) sub GROUP BY 1 ORDER BY 2 DESC"
+	if global != nil {
+		resTimes = wrabitDB.LogAndQuery(r.db, preferredWritingTimesQuery)
+	} else {
+		preferredWritingTimesQuery := "SELECT hour, count(*) FROM (SELECT date_part('hour', updated_at) as hour FROM entries WHERE user_id = $1) sub GROUP BY 1 ORDER BY 2 DESC"
+		resTimes = wrabitDB.LogAndQuery(r.db, preferredWritingTimesQuery, user.Subject)
+	}
 	defer resTimes.Close()
 	for resTimes.Next() {
 		var preferredWritingTime = new(PreferredWritingTime)
