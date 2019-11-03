@@ -406,6 +406,48 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 	return entry, nil
 }
 
+func (r *queryResolver) Stats(ctx context.Context, global *bool) (*Stats, error) {
+	var stats = new(Stats)
+
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT sum(word_count) as words_written FROM entries")
+	err := res.Scan(&stats.WordsWritten)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT max(word_count) as longest_entry FROM entries")
+	err = res.Scan(&stats.LongestEntry)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT max(day_count) as longest_streak FROM streaks")
+	err = res.Scan(&stats.LongestStreak)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT preferred_day_of_week  FROM (SELECT date_part('dow', updated_at) as preferred_day_of_week FROM entries) sub GROUP BY 1 ORDER BY count(*) DESC LIMIT 1")
+	err = res.Scan(&stats.PreferredDayOfWeek)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	resTimes := wrabitDB.LogAndQuery(r.db, "SELECT hour, count(*) FROM (SELECT date_part('hour', updated_at) as hour FROM entries) sub GROUP BY 1 ORDER BY 2 DESC")
+	defer resTimes.Close()
+	for resTimes.Next() {
+		var preferredWritingTime = new(PreferredWritingTime)
+		if err := resTimes.Scan(&preferredWritingTime.Hour, &preferredWritingTime.Count); err != nil {
+			panic(err)
+		}
+
+		stats.PreferredWritingTimes = append(stats.PreferredWritingTimes, preferredWritingTime)
+	}
+
+	return stats, nil
+}
+
+// Individul resolvers
 type editorResolver struct{ *Resolver }
 
 func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {

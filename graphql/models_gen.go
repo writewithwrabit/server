@@ -34,6 +34,19 @@ type NewUser struct {
 	Email     string  `json:"email"`
 }
 
+type PreferredWritingTime struct {
+	Hour  int `json:"hour"`
+	Count int `json:"count"`
+}
+
+type Stats struct {
+	WordsWritten          int                     `json:"wordsWritten"`
+	LongestStreak         int                     `json:"longestStreak"`
+	LongestEntry          int                     `json:"longestEntry"`
+	PreferredWritingTimes []*PreferredWritingTime `json:"preferredWritingTimes"`
+	PreferredDayOfWeek    int                     `json:"preferredDayOfWeek"`
+}
+
 type UpdatedUser struct {
 	ID         string  `json:"id"`
 	FirebaseID *string `json:"firebaseID"`
