@@ -74,13 +74,27 @@ type ComplexityRoot struct {
 		UpdateUser         func(childComplexity int, input UpdatedUser) int
 	}
 
+	PreferredWritingTime struct {
+		Count func(childComplexity int) int
+		Hour  func(childComplexity int) int
+	}
+
 	Query struct {
 		DailyEntry       func(childComplexity int, userID string, date string) int
 		Editors          func(childComplexity int, id *string) int
 		Entries          func(childComplexity int, id *string) int
 		EntriesByUserID  func(childComplexity int, userID string, startDate *string, endDate *string) int
+		Stats            func(childComplexity int, global bool) int
 		User             func(childComplexity int, id *string) int
 		UserByFirebaseID func(childComplexity int, firebaseID *string) int
+	}
+
+	Stats struct {
+		LongestEntry          func(childComplexity int) int
+		LongestStreak         func(childComplexity int) int
+		PreferredDayOfWeek    func(childComplexity int) int
+		PreferredWritingTimes func(childComplexity int) int
+		WordsWritten          func(childComplexity int) int
 	}
 
 	Streak struct {
@@ -110,8 +124,6 @@ type EditorResolver interface {
 }
 type EntryResolver interface {
 	User(ctx context.Context, obj *Entry) (*User, error)
-
-	GoalHit(ctx context.Context, obj *Entry) (bool, error)
 }
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input NewUser) (*User, error)
@@ -128,6 +140,7 @@ type QueryResolver interface {
 	Entries(ctx context.Context, id *string) ([]*Entry, error)
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
 	DailyEntry(ctx context.Context, userID string, date string) (*Entry, error)
+	Stats(ctx context.Context, global bool) (*Stats, error)
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
@@ -318,6 +331,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(UpdatedUser)), true
 
+	case "PreferredWritingTime.count":
+		if e.complexity.PreferredWritingTime.Count == nil {
+			break
+		}
+
+		return e.complexity.PreferredWritingTime.Count(childComplexity), true
+
+	case "PreferredWritingTime.hour":
+		if e.complexity.PreferredWritingTime.Hour == nil {
+			break
+		}
+
+		return e.complexity.PreferredWritingTime.Hour(childComplexity), true
+
 	case "Query.dailyEntry":
 		if e.complexity.Query.DailyEntry == nil {
 			break
@@ -366,6 +393,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.EntriesByUserID(childComplexity, args["userID"].(string), args["startDate"].(*string), args["endDate"].(*string)), true
 
+	case "Query.stats":
+		if e.complexity.Query.Stats == nil {
+			break
+		}
+
+		args, err := ec.field_Query_stats_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Stats(childComplexity, args["global"].(bool)), true
+
 	case "Query.user":
 		if e.complexity.Query.User == nil {
 			break
@@ -389,6 +428,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.UserByFirebaseID(childComplexity, args["firebaseID"].(*string)), true
+
+	case "Stats.longestEntry":
+		if e.complexity.Stats.LongestEntry == nil {
+			break
+		}
+
+		return e.complexity.Stats.LongestEntry(childComplexity), true
+
+	case "Stats.longestStreak":
+		if e.complexity.Stats.LongestStreak == nil {
+			break
+		}
+
+		return e.complexity.Stats.LongestStreak(childComplexity), true
+
+	case "Stats.preferredDayOfWeek":
+		if e.complexity.Stats.PreferredDayOfWeek == nil {
+			break
+		}
+
+		return e.complexity.Stats.PreferredDayOfWeek(childComplexity), true
+
+	case "Stats.preferredWritingTimes":
+		if e.complexity.Stats.PreferredWritingTimes == nil {
+			break
+		}
+
+		return e.complexity.Stats.PreferredWritingTimes(childComplexity), true
+
+	case "Stats.wordsWritten":
+		if e.complexity.Stats.WordsWritten == nil {
+			break
+		}
+
+		return e.complexity.Stats.WordsWritten(childComplexity), true
 
 	case "Streak.createdAt":
 		if e.complexity.Streak.CreatedAt == nil {
@@ -598,6 +672,19 @@ type Streak {
   updatedAt: String!
 }
 
+type PreferredWritingTime {
+  hour: Int!
+  count: Int!
+}
+
+type Stats {
+  wordsWritten: Int!
+  longestStreak: Int!
+  longestEntry: Int!
+  preferredWritingTimes: [PreferredWritingTime]!
+  preferredDayOfWeek: Int!
+}
+
 type Query {
   user(ID: String): User!
   userByFirebaseID(firebaseID: String): User!
@@ -605,6 +692,7 @@ type Query {
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
+  stats(global: Boolean!): Stats!
 }
 
 input NewUser {
@@ -855,6 +943,20 @@ func (ec *executionContext) field_Query_entries_args(ctx context.Context, rawArg
 		}
 	}
 	args["ID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_stats_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 bool
+	if tmp, ok := rawArgs["global"]; ok {
+		arg0, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["global"] = arg0
 	return args, nil
 }
 
@@ -1342,13 +1444,13 @@ func (ec *executionContext) _Entry_goalHit(ctx context.Context, field graphql.Co
 		Object:   "Entry",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Entry().GoalHit(rctx, obj)
+		return obj.GoalHit, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1704,6 +1806,80 @@ func (ec *executionContext) _Mutation_createSubscription(ctx context.Context, fi
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _PreferredWritingTime_hour(ctx context.Context, field graphql.CollectedField, obj *PreferredWritingTime) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "PreferredWritingTime",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Hour, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferredWritingTime_count(ctx context.Context, field graphql.CollectedField, obj *PreferredWritingTime) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "PreferredWritingTime",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Count, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -1968,6 +2144,50 @@ func (ec *executionContext) _Query_dailyEntry(ctx context.Context, field graphql
 	return ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐEntry(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_stats(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_stats_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Stats(rctx, args["global"].(bool))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Stats)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNStats2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStats(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -2041,6 +2261,191 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Stats_wordsWritten(ctx context.Context, field graphql.CollectedField, obj *Stats) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Stats",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WordsWritten, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Stats_longestStreak(ctx context.Context, field graphql.CollectedField, obj *Stats) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Stats",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LongestStreak, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Stats_longestEntry(ctx context.Context, field graphql.CollectedField, obj *Stats) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Stats",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LongestEntry, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Stats_preferredWritingTimes(ctx context.Context, field graphql.CollectedField, obj *Stats) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Stats",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PreferredWritingTimes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*PreferredWritingTime)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNPreferredWritingTime2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPreferredWritingTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Stats_preferredDayOfWeek(ctx context.Context, field graphql.CollectedField, obj *Stats) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Stats",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PreferredDayOfWeek, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Streak_id(ctx context.Context, field graphql.CollectedField, obj *Streak) (ret graphql.Marshaler) {
@@ -4071,19 +4476,10 @@ func (ec *executionContext) _Entry(ctx context.Context, sel ast.SelectionSet, ob
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "goalHit":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Entry_goalHit(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._Entry_goalHit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "createdAt":
 			out.Values[i] = ec._Entry_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4147,6 +4543,38 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createSubscription":
 			out.Values[i] = ec._Mutation_createSubscription(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var preferredWritingTimeImplementors = []string{"PreferredWritingTime"}
+
+func (ec *executionContext) _PreferredWritingTime(ctx context.Context, sel ast.SelectionSet, obj *PreferredWritingTime) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, preferredWritingTimeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PreferredWritingTime")
+		case "hour":
+			out.Values[i] = ec._PreferredWritingTime_hour(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "count":
+			out.Values[i] = ec._PreferredWritingTime_count(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4260,10 +4688,71 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "stats":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_stats(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "__type":
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
 			out.Values[i] = ec._Query___schema(ctx, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var statsImplementors = []string{"Stats"}
+
+func (ec *executionContext) _Stats(ctx context.Context, sel ast.SelectionSet, obj *Stats) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, statsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Stats")
+		case "wordsWritten":
+			out.Values[i] = ec._Stats_wordsWritten(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "longestStreak":
+			out.Values[i] = ec._Stats_longestStreak(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "longestEntry":
+			out.Values[i] = ec._Stats_longestEntry(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "preferredWritingTimes":
+			out.Values[i] = ec._Stats_preferredWritingTimes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "preferredDayOfWeek":
+			out.Values[i] = ec._Stats_preferredDayOfWeek(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4803,6 +5292,57 @@ func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋwritewithwrabitᚋs
 	return ec.unmarshalInputNewUser(ctx, v)
 }
 
+func (ec *executionContext) marshalNPreferredWritingTime2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPreferredWritingTime(ctx context.Context, sel ast.SelectionSet, v []*PreferredWritingTime) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		rctx := &graphql.ResolverContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOPreferredWritingTime2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPreferredWritingTime(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNStats2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStats(ctx context.Context, sel ast.SelectionSet, v Stats) graphql.Marshaler {
+	return ec._Stats(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNStats2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStats(ctx context.Context, sel ast.SelectionSet, v *Stats) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Stats(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	return graphql.UnmarshalString(v)
 }
@@ -5128,6 +5668,17 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 		return graphql.Null
 	}
 	return ec.marshalOInt2int(ctx, sel, *v)
+}
+
+func (ec *executionContext) marshalOPreferredWritingTime2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPreferredWritingTime(ctx context.Context, sel ast.SelectionSet, v PreferredWritingTime) graphql.Marshaler {
+	return ec._PreferredWritingTime(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOPreferredWritingTime2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPreferredWritingTime(ctx context.Context, sel ast.SelectionSet, v *PreferredWritingTime) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PreferredWritingTime(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

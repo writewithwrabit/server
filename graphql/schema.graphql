@@ -39,6 +39,19 @@ type Streak {
   updatedAt: String!
 }
 
+type PreferredWritingTime {
+  hour: Int!
+  count: Int!
+}
+
+type Stats {
+  wordsWritten: Int!
+  longestStreak: Int!
+  longestEntry: Int!
+  preferredWritingTimes: [PreferredWritingTime]!
+  preferredDayOfWeek: Int!
+}
+
 type Query {
   user(ID: String): User!
   userByFirebaseID(firebaseID: String): User!
@@ -46,6 +59,7 @@ type Query {
   entries(ID: ID): [Entry!]!
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
+  stats(global: Boolean!): Stats!
 }
 
 input NewUser {
