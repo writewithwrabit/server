@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"os"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/sub"
 	"github.com/writewithwrabit/server/auth"
+	cryptopasta "github.com/writewithwrabit/server/cryptopasta"
 	wrabitDB "github.com/writewithwrabit/server/db"
 )
 
@@ -75,7 +77,6 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User
 	user.StripeID = &cus.ID
 
 	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO users (first_name, last_name, email, stripe_id) VALUES ($1, $2, $3, $4) RETURNING id", user.FirstName, user.LastName, user.Email, cus.ID)
-	fmt.Println(res)
 	if err := res.Scan(&user.ID); err != nil {
 		panic(err)
 	}
@@ -198,6 +199,17 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		return &Entry{}, fmt.Errorf("Access denied")
 	}
 
+	key := [32]byte{}
+	keyString := os.Getenv("ENCRYPTION_KEY")
+	copy(key[:], keyString)
+
+	// Encrypt the content for the database
+	// but return the unencrypted content to the client
+	content, err := cryptopasta.Encrypt([]byte(input.Content), &key)
+	if err != nil {
+		panic(err)
+	}
+
 	entry := &Entry{
 		ID:        id,
 		UserID:    input.UserID,
@@ -206,7 +218,7 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		GoalHit:   input.GoalHit,
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE entries SET content = $1, word_count = $2, goal_hit = $3 WHERE id = $4 AND user_id = $5 RETURNING id", entry.Content, entry.WordCount, entry.GoalHit, entry.ID, entry.UserID)
+	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE entries SET content = $1, word_count = $2, goal_hit = $3 WHERE id = $4 AND user_id = $5 RETURNING id", hex.EncodeToString(content), entry.WordCount, entry.GoalHit, entry.ID, entry.UserID)
 	if err := res.Scan(&entry.ID); err != nil {
 		panic(err)
 	}
@@ -325,6 +337,10 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 		return []*Entry{}, fmt.Errorf("Access denied")
 	}
 
+	key := [32]byte{}
+	keyString := os.Getenv("ENCRYPTION_KEY")
+	copy(key[:], keyString)
+
 	var entries []*Entry
 
 	if id == nil {
@@ -334,6 +350,12 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 			var entry = new(Entry)
 			if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 				panic(err)
+			}
+
+			decodedContent, err := hex.DecodeString(entry.Content)
+			content, err := cryptopasta.Decrypt(decodedContent, &key)
+			if err == nil {
+				entry.Content = string(content)
 			}
 
 			entries = append(entries, entry)
@@ -357,6 +379,10 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 		return []*Entry{}, fmt.Errorf("Access denied")
 	}
 
+	key := [32]byte{}
+	keyString := os.Getenv("ENCRYPTION_KEY")
+	copy(key[:], keyString)
+
 	var entries []*Entry
 
 	var res *sql.Rows
@@ -377,6 +403,12 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 			panic(err)
 		}
 
+		decodedContent, err := hex.DecodeString(entry.Content)
+		content, err := cryptopasta.Decrypt(decodedContent, &key)
+		if err == nil {
+			entry.Content = string(content)
+		}
+
 		entries = append(entries, entry)
 	}
 
@@ -387,6 +419,10 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 	if user := auth.ForContext(ctx); user == nil {
 		return &Entry{}, fmt.Errorf("Access denied")
 	}
+
+	key := [32]byte{}
+	keyString := os.Getenv("ENCRYPTION_KEY")
+	copy(key[:], keyString)
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, date)
 
@@ -400,6 +436,12 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 		res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO entries (user_id, content, word_count, created_at) VALUES ($1, $2, $3, $4) RETURNING id", userID, "", 0, date)
 		if err := res.Scan(&entry.ID); err != nil {
 			panic(err)
+		}
+	} else {
+		decodedContent, err := hex.DecodeString(entry.Content)
+		content, err := cryptopasta.Decrypt(decodedContent, &key)
+		if err == nil {
+			entry.Content = string(content)
 		}
 	}
 
