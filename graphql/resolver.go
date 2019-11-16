@@ -56,6 +56,10 @@ func (r *Resolver) User() UserResolver {
 	return &userResolver{r}
 }
 
+func (r *Resolver) StripeSubscription() StripeSubscriptionResolver {
+	return &stripeSubscriptionResolver{r}
+}
+
 type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
@@ -619,4 +623,20 @@ func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*Stri
 	}
 
 	return userSubscription, nil
+}
+
+type stripeSubscriptionResolver struct{ *Resolver }
+
+func (r *stripeSubscriptionResolver) Plan(ctx context.Context, obj *StripeSubscription) (*Plan, error) {
+	plan := &Plan{
+		ID:       obj.Plan.ID,
+		Nickname: obj.Plan.Nickname,
+		Product:  obj.Plan.Product.ID,
+	}
+
+	return plan, nil
+}
+
+func (r *stripeSubscriptionResolver) Status(ctx context.Context, obj *StripeSubscription) (string, error) {
+	return fmt.Sprintf("%s", obj.Status), nil
 }
