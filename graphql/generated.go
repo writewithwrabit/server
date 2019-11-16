@@ -39,6 +39,7 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Streak() StreakResolver
+	StripeSubscription() StripeSubscriptionResolver
 	User() UserResolver
 }
 
@@ -161,6 +162,10 @@ type QueryResolver interface {
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
+}
+type StripeSubscriptionResolver interface {
+	Status(ctx context.Context, obj *StripeSubscription) (string, error)
+	Plan(ctx context.Context, obj *StripeSubscription) (*Plan, error)
 }
 type UserResolver interface {
 	StripeSubscription(ctx context.Context, obj *User) (*StripeSubscription, error)
@@ -2992,10 +2997,10 @@ func (ec *executionContext) _StripeSubscription_trialEnd(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StripeSubscription_cancelAt(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
@@ -3029,10 +3034,10 @@ func (ec *executionContext) _StripeSubscription_cancelAt(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StripeSubscription_status(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
@@ -3048,13 +3053,13 @@ func (ec *executionContext) _StripeSubscription_status(ctx context.Context, fiel
 		Object:   "StripeSubscription",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Status, nil
+		return ec.resolvers.StripeSubscription().Status(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3085,13 +3090,13 @@ func (ec *executionContext) _StripeSubscription_plan(ctx context.Context, field 
 		Object:   "StripeSubscription",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Plan, nil
+		return ec.resolvers.StripeSubscription().Plan(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5349,33 +5354,51 @@ func (ec *executionContext) _StripeSubscription(ctx context.Context, sel ast.Sel
 		case "id":
 			out.Values[i] = ec._StripeSubscription_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "currentPeriodEnd":
 			out.Values[i] = ec._StripeSubscription_currentPeriodEnd(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "trialEnd":
 			out.Values[i] = ec._StripeSubscription_trialEnd(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "cancelAt":
 			out.Values[i] = ec._StripeSubscription_cancelAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "status":
-			out.Values[i] = ec._StripeSubscription_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StripeSubscription_status(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "plan":
-			out.Values[i] = ec._StripeSubscription_plan(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StripeSubscription_plan(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
