@@ -39,6 +39,7 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Streak() StreakResolver
+	User() UserResolver
 }
 
 type DirectiveRoot struct {
@@ -74,6 +75,12 @@ type ComplexityRoot struct {
 		UpdateUser         func(childComplexity int, input UpdatedUser) int
 	}
 
+	Plan struct {
+		ID       func(childComplexity int) int
+		Nickname func(childComplexity int) int
+		Product  func(childComplexity int) int
+	}
+
 	PreferredWritingTime struct {
 		Count func(childComplexity int) int
 		Hour  func(childComplexity int) int
@@ -106,16 +113,26 @@ type ComplexityRoot struct {
 		User        func(childComplexity int) int
 	}
 
+	StripeSubscription struct {
+		CancelAt         func(childComplexity int) int
+		CurrentPeriodEnd func(childComplexity int) int
+		ID               func(childComplexity int) int
+		Plan             func(childComplexity int) int
+		Status           func(childComplexity int) int
+		TrialEnd         func(childComplexity int) int
+	}
+
 	User struct {
-		CreatedAt  func(childComplexity int) int
-		Email      func(childComplexity int) int
-		FirebaseID func(childComplexity int) int
-		FirstName  func(childComplexity int) int
-		ID         func(childComplexity int) int
-		LastName   func(childComplexity int) int
-		StripeID   func(childComplexity int) int
-		UpdatedAt  func(childComplexity int) int
-		WordGoal   func(childComplexity int) int
+		CreatedAt          func(childComplexity int) int
+		Email              func(childComplexity int) int
+		FirebaseID         func(childComplexity int) int
+		FirstName          func(childComplexity int) int
+		ID                 func(childComplexity int) int
+		LastName           func(childComplexity int) int
+		StripeID           func(childComplexity int) int
+		StripeSubscription func(childComplexity int) int
+		UpdatedAt          func(childComplexity int) int
+		WordGoal           func(childComplexity int) int
 	}
 }
 
@@ -144,6 +161,9 @@ type QueryResolver interface {
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
+}
+type UserResolver interface {
+	StripeSubscription(ctx context.Context, obj *User) (*StripeSubscription, error)
 }
 
 type executableSchema struct {
@@ -331,6 +351,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateUser(childComplexity, args["input"].(UpdatedUser)), true
 
+	case "Plan.id":
+		if e.complexity.Plan.ID == nil {
+			break
+		}
+
+		return e.complexity.Plan.ID(childComplexity), true
+
+	case "Plan.nickname":
+		if e.complexity.Plan.Nickname == nil {
+			break
+		}
+
+		return e.complexity.Plan.Nickname(childComplexity), true
+
+	case "Plan.product":
+		if e.complexity.Plan.Product == nil {
+			break
+		}
+
+		return e.complexity.Plan.Product(childComplexity), true
+
 	case "PreferredWritingTime.count":
 		if e.complexity.PreferredWritingTime.Count == nil {
 			break
@@ -506,6 +547,48 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Streak.User(childComplexity), true
 
+	case "StripeSubscription.cancelAt":
+		if e.complexity.StripeSubscription.CancelAt == nil {
+			break
+		}
+
+		return e.complexity.StripeSubscription.CancelAt(childComplexity), true
+
+	case "StripeSubscription.currentPeriodEnd":
+		if e.complexity.StripeSubscription.CurrentPeriodEnd == nil {
+			break
+		}
+
+		return e.complexity.StripeSubscription.CurrentPeriodEnd(childComplexity), true
+
+	case "StripeSubscription.id":
+		if e.complexity.StripeSubscription.ID == nil {
+			break
+		}
+
+		return e.complexity.StripeSubscription.ID(childComplexity), true
+
+	case "StripeSubscription.plan":
+		if e.complexity.StripeSubscription.Plan == nil {
+			break
+		}
+
+		return e.complexity.StripeSubscription.Plan(childComplexity), true
+
+	case "StripeSubscription.status":
+		if e.complexity.StripeSubscription.Status == nil {
+			break
+		}
+
+		return e.complexity.StripeSubscription.Status(childComplexity), true
+
+	case "StripeSubscription.trialEnd":
+		if e.complexity.StripeSubscription.TrialEnd == nil {
+			break
+		}
+
+		return e.complexity.StripeSubscription.TrialEnd(childComplexity), true
+
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
 			break
@@ -554,6 +637,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.StripeID(childComplexity), true
+
+	case "User.StripeSubscription":
+		if e.complexity.User.StripeSubscription == nil {
+			break
+		}
+
+		return e.complexity.User.StripeSubscription(childComplexity), true
 
 	case "User.updatedAt":
 		if e.complexity.User.UpdatedAt == nil {
@@ -641,6 +731,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
   wordGoal: Int!
   createdAt: String!
   updatedAt: String!
+  StripeSubscription: StripeSubscription
 }
 
 type Entry {
@@ -683,6 +774,21 @@ type Stats {
   longestEntry: Int!
   preferredWritingTimes: [PreferredWritingTime]!
   preferredDayOfWeek: Int!
+}
+
+type StripeSubscription {
+  id: ID!
+  currentPeriodEnd: Int!
+  trialEnd: Int!
+  cancelAt: Int!
+  status: String!
+  plan: Plan!
+}
+
+type Plan {
+  id: ID!
+  nickname: String!
+  product: String!
 }
 
 type Query {
@@ -1806,6 +1912,117 @@ func (ec *executionContext) _Mutation_createSubscription(ctx context.Context, fi
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Plan_id(ctx context.Context, field graphql.CollectedField, obj *Plan) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Plan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Plan_nickname(ctx context.Context, field graphql.CollectedField, obj *Plan) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Plan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nickname, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Plan_product(ctx context.Context, field graphql.CollectedField, obj *Plan) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Plan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Product, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _PreferredWritingTime_hour(ctx context.Context, field graphql.CollectedField, obj *PreferredWritingTime) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -2670,6 +2887,228 @@ func (ec *executionContext) _Streak_updatedAt(ctx context.Context, field graphql
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _StripeSubscription_id(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "StripeSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _StripeSubscription_currentPeriodEnd(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "StripeSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentPeriodEnd, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _StripeSubscription_trialEnd(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "StripeSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TrialEnd, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _StripeSubscription_cancelAt(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "StripeSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CancelAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _StripeSubscription_status(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "StripeSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _StripeSubscription_plan(ctx context.Context, field graphql.CollectedField, obj *StripeSubscription) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "StripeSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Plan, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Plan)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNPlan2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPlan(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -2992,6 +3431,40 @@ func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.C
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_StripeSubscription(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().StripeSubscription(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*StripeSubscription)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -4557,6 +5030,43 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
+var planImplementors = []string{"Plan"}
+
+func (ec *executionContext) _Plan(ctx context.Context, sel ast.SelectionSet, obj *Plan) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, planImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Plan")
+		case "id":
+			out.Values[i] = ec._Plan_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "nickname":
+			out.Values[i] = ec._Plan_nickname(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "product":
+			out.Values[i] = ec._Plan_product(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var preferredWritingTimeImplementors = []string{"PreferredWritingTime"}
 
 func (ec *executionContext) _PreferredWritingTime(ctx context.Context, sel ast.SelectionSet, obj *PreferredWritingTime) graphql.Marshaler {
@@ -4825,6 +5335,58 @@ func (ec *executionContext) _Streak(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
+var stripeSubscriptionImplementors = []string{"StripeSubscription"}
+
+func (ec *executionContext) _StripeSubscription(ctx context.Context, sel ast.SelectionSet, obj *StripeSubscription) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, stripeSubscriptionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("StripeSubscription")
+		case "id":
+			out.Values[i] = ec._StripeSubscription_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "currentPeriodEnd":
+			out.Values[i] = ec._StripeSubscription_currentPeriodEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "trialEnd":
+			out.Values[i] = ec._StripeSubscription_trialEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "cancelAt":
+			out.Values[i] = ec._StripeSubscription_cancelAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "status":
+			out.Values[i] = ec._StripeSubscription_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "plan":
+			out.Values[i] = ec._StripeSubscription_plan(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var userImplementors = []string{"User"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *User) graphql.Marshaler {
@@ -4839,7 +5401,7 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "firebaseID":
 			out.Values[i] = ec._User_firebaseID(ctx, field, obj)
@@ -4848,30 +5410,41 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "firstName":
 			out.Values[i] = ec._User_firstName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "lastName":
 			out.Values[i] = ec._User_lastName(ctx, field, obj)
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "wordGoal":
 			out.Values[i] = ec._User_wordGoal(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "updatedAt":
 			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "StripeSubscription":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_StripeSubscription(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5276,6 +5849,20 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) unmarshalNInt2int64(ctx context.Context, v interface{}) (int64, error) {
+	return graphql.UnmarshalInt64(v)
+}
+
+func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.SelectionSet, v int64) graphql.Marshaler {
+	res := graphql.MarshalInt64(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNNewEditor2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewEditor(ctx context.Context, v interface{}) (NewEditor, error) {
 	return ec.unmarshalInputNewEditor(ctx, v)
 }
@@ -5290,6 +5877,20 @@ func (ec *executionContext) unmarshalNNewSubscription2githubᚗcomᚋwritewithwr
 
 func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐNewUser(ctx context.Context, v interface{}) (NewUser, error) {
 	return ec.unmarshalInputNewUser(ctx, v)
+}
+
+func (ec *executionContext) marshalNPlan2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPlan(ctx context.Context, sel ast.SelectionSet, v Plan) graphql.Marshaler {
+	return ec._Plan(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPlan2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPlan(ctx context.Context, sel ast.SelectionSet, v *Plan) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Plan(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPreferredWritingTime2ᚕᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐPreferredWritingTime(ctx context.Context, sel ast.SelectionSet, v []*PreferredWritingTime) graphql.Marshaler {
@@ -5702,6 +6303,17 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	return ec.marshalOString2string(ctx, sel, *v)
+}
+
+func (ec *executionContext) marshalOStripeSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx context.Context, sel ast.SelectionSet, v StripeSubscription) graphql.Marshaler {
+	return ec._StripeSubscription(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx context.Context, sel ast.SelectionSet, v *StripeSubscription) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._StripeSubscription(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValue(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

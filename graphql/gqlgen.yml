@@ -16,6 +16,10 @@ models:
     model: github.com/writewithwrabit/server/graphql.Entry
   Streak:
     model: github.com/writewithwrabit/server/graphql.Streak
+  User:
+    model: github.com/writewithwrabit/server/graphql.User
+  StripeSubscription:
+    model: github.com/writewithwrabit/server/graphql.StripeSubscription
 resolver:
   filename: resolver.go
   type: Resolver
