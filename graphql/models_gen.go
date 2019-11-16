@@ -53,15 +53,6 @@ type Stats struct {
 	PreferredDayOfWeek    int                     `json:"preferredDayOfWeek"`
 }
 
-type StripeSubscription struct {
-	ID               string `json:"id"`
-	CurrentPeriodEnd int    `json:"currentPeriodEnd"`
-	TrialEnd         int    `json:"trialEnd"`
-	CancelAt         int    `json:"cancelAt"`
-	Status           string `json:"status"`
-	Plan             *Plan  `json:"plan"`
-}
-
 type UpdatedUser struct {
 	ID         string  `json:"id"`
 	FirebaseID *string `json:"firebaseID"`

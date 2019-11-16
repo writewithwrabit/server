@@ -291,10 +291,10 @@ func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
 		return &User{}, fmt.Errorf("Access denied")
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", id)
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal, stripe_subscription_id FROM users WHERE id = $1", id)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.StripeSubscriptionID); err != nil {
 		panic(err)
 	}
 
@@ -302,10 +302,10 @@ func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
 }
 
 func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string) (*User, error) {
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE firebase_id = $1", firebaseID)
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal, stripe_subscription_id FROM users WHERE firebase_id = $1", firebaseID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.StripeSubscriptionID); err != nil {
 		panic(err)
 	}
 
@@ -601,9 +601,22 @@ func (r *streakResolver) LastEntryID(ctx context.Context, obj *Streak) (string, 
 type userResolver struct{ *Resolver }
 
 func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*StripeSubscription, error) {
-	subscription := &StripeSubscription{
-		ID: obj.StripeSubscriptionID,
+	// Initialize Stripe
+	stripe.Key = os.Getenv("STRIPE_KEY")
+
+	subscription, _ := sub.Get(
+		obj.StripeSubscriptionID,
+		nil,
+	)
+
+	userSubscription := &StripeSubscription{
+		ID:               subscription.ID,
+		CurrentPeriodEnd: subscription.CurrentPeriodEnd,
+		TrialEnd:         subscription.TrialEnd,
+		CancelAt:         subscription.CancelAt,
+		Status:           subscription.Status,
+		Plan:             subscription.Plan,
 	}
 
-	return subscription, nil
+	return userSubscription, nil
 }
