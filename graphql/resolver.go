@@ -52,6 +52,10 @@ func (r *Resolver) Streak() StreakResolver {
 	return &streakResolver{r}
 }
 
+func (r *Resolver) User() UserResolver {
+	return &userResolver{r}
+}
+
 type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
@@ -165,8 +169,16 @@ func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubs
 		TrialFromPlan: stripe.Bool(true),
 	}
 
-	_, err = sub.New(subParams)
+	subscription, err := sub.New(subParams)
 	if err != nil {
+		panic(err)
+	}
+
+	var user = User{
+		StripeID: &input.StripeID,
+	}
+	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET stripe_subscription_id = $1 WHERE stripe_id = $2 RETURNING id", subscription.ID, input.StripeID)
+	if err := res.Scan(&user.ID); err != nil {
 		panic(err)
 	}
 
@@ -584,4 +596,14 @@ func (r *streakResolver) User(ctx context.Context, obj *Streak) (*User, error) {
 
 func (r *streakResolver) LastEntryID(ctx context.Context, obj *Streak) (string, error) {
 	return obj.LastEntryID, nil
+}
+
+type userResolver struct{ *Resolver }
+
+func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*StripeSubscription, error) {
+	subscription := &StripeSubscription{
+		ID: obj.StripeSubscriptionID,
+	}
+
+	return subscription, nil
 }

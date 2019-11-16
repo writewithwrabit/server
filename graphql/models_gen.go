@@ -34,6 +34,12 @@ type NewUser struct {
 	Email     string  `json:"email"`
 }
 
+type Plan struct {
+	ID       string `json:"id"`
+	Nickname string `json:"nickname"`
+	Product  string `json:"product"`
+}
+
 type PreferredWritingTime struct {
 	Hour  int `json:"hour"`
 	Count int `json:"count"`
@@ -47,6 +53,15 @@ type Stats struct {
 	PreferredDayOfWeek    int                     `json:"preferredDayOfWeek"`
 }
 
+type StripeSubscription struct {
+	ID               string `json:"id"`
+	CurrentPeriodEnd int    `json:"currentPeriodEnd"`
+	TrialEnd         int    `json:"trialEnd"`
+	CancelAt         int    `json:"cancelAt"`
+	Status           string `json:"status"`
+	Plan             *Plan  `json:"plan"`
+}
+
 type UpdatedUser struct {
 	ID         string  `json:"id"`
 	FirebaseID *string `json:"firebaseID"`
@@ -55,16 +70,4 @@ type UpdatedUser struct {
 	LastName   *string `json:"lastName"`
 	Email      *string `json:"email"`
 	WordGoal   *int    `json:"wordGoal"`
-}
-
-type User struct {
-	ID         string  `json:"id"`
-	FirebaseID *string `json:"firebaseID"`
-	StripeID   *string `json:"stripeID"`
-	FirstName  string  `json:"firstName"`
-	LastName   *string `json:"lastName"`
-	Email      string  `json:"email"`
-	WordGoal   int     `json:"wordGoal"`
-	CreatedAt  string  `json:"createdAt"`
-	UpdatedAt  string  `json:"updatedAt"`
 }
