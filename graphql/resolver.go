@@ -149,7 +149,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*
 	return &user, nil
 }
 
-func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubscription) (string, error) {
+func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubscription) (*StripeSubscription, error) {
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
@@ -170,7 +170,7 @@ func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubs
 				Plan: stripe.String(input.SubscriptionID),
 			},
 		},
-		TrialFromPlan: stripe.Bool(true),
+		TrialFromPlan: stripe.Bool(input.Trial),
 	}
 
 	subscription, err := sub.New(subParams)
@@ -183,6 +183,27 @@ func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubs
 	}
 	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET stripe_subscription_id = $1 WHERE stripe_id = $2 RETURNING id", subscription.ID, input.StripeID)
 	if err := res.Scan(&user.ID); err != nil {
+		panic(err)
+	}
+
+	var newSubscription = &StripeSubscription{
+		ID:               subscription.ID,
+		CurrentPeriodEnd: subscription.CurrentPeriodEnd,
+		TrialEnd:         subscription.TrialEnd,
+		CancelAt:         subscription.CancelAt,
+		Status:           subscription.Status,
+		Plan:             subscription.Plan,
+	}
+
+	return newSubscription, nil
+}
+
+func (r *mutationResolver) CancelSubscription(ctx context.Context, id string) (string, error) {
+	// Initialize Stripe
+	stripe.Key = os.Getenv("STRIPE_KEY")
+
+	_, err := sub.Cancel(id, nil)
+	if err != nil {
 		panic(err)
 	}
 
