@@ -26,6 +26,7 @@ type NewSubscription struct {
 	StripeID       string `json:"stripeId"`
 	TokenID        string `json:"tokenId"`
 	SubscriptionID string `json:"subscriptionId"`
+	Trial          bool   `json:"trial"`
 }
 
 type NewUser struct {

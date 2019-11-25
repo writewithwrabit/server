@@ -68,6 +68,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
+		CancelSubscription func(childComplexity int, id string) int
 		CreateEditor       func(childComplexity int, input NewEditor) int
 		CreateEntry        func(childComplexity int, input NewEntry) int
 		CreateSubscription func(childComplexity int, input NewSubscription) int
@@ -149,7 +150,8 @@ type MutationResolver interface {
 	CreateEntry(ctx context.Context, input NewEntry) (*Entry, error)
 	UpdateEntry(ctx context.Context, id string, input ExistingEntry, date string) (*Entry, error)
 	CreateEditor(ctx context.Context, input NewEditor) (*Editor, error)
-	CreateSubscription(ctx context.Context, input NewSubscription) (string, error)
+	CreateSubscription(ctx context.Context, input NewSubscription) (*StripeSubscription, error)
+	CancelSubscription(ctx context.Context, id string) (string, error)
 }
 type QueryResolver interface {
 	User(ctx context.Context, id *string) (*User, error)
@@ -283,6 +285,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Entry.WordCount(childComplexity), true
+
+	case "Mutation.cancelSubscription":
+		if e.complexity.Mutation.CancelSubscription == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_cancelSubscription_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CancelSubscription(childComplexity, args["id"].(string)), true
 
 	case "Mutation.createEditor":
 		if e.complexity.Mutation.CreateEditor == nil {
@@ -846,6 +860,7 @@ input NewSubscription {
   stripeId: String!
   tokenId: String!
   subscriptionId: String!
+  trial: Boolean!
 }
 
 type Mutation {
@@ -854,7 +869,8 @@ type Mutation {
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!, date: String!): Entry!
   createEditor(input: NewEditor!): Editor!
-  createSubscription(input: NewSubscription!): String!
+  createSubscription(input: NewSubscription!): StripeSubscription!
+  cancelSubscription(id: ID!): String!
 }
 `},
 )
@@ -862,6 +878,20 @@ type Mutation {
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_cancelSubscription_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_createEditor_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -1900,6 +1930,50 @@ func (ec *executionContext) _Mutation_createSubscription(ctx context.Context, fi
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().CreateSubscription(rctx, args["input"].(NewSubscription))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*StripeSubscription)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_cancelSubscription(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_cancelSubscription_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CancelSubscription(rctx, args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4749,6 +4823,12 @@ func (ec *executionContext) unmarshalInputNewSubscription(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
+		case "trial":
+			var err error
+			it.Trial, err = ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -5021,6 +5101,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createSubscription":
 			out.Values[i] = ec._Mutation_createSubscription(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "cancelSubscription":
+			out.Values[i] = ec._Mutation_cancelSubscription(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -5979,6 +6064,20 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNStripeSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx context.Context, sel ast.SelectionSet, v StripeSubscription) graphql.Marshaler {
+	return ec._StripeSubscription(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx context.Context, sel ast.SelectionSet, v *StripeSubscription) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._StripeSubscription(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdatedUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUpdatedUser(ctx context.Context, v interface{}) (UpdatedUser, error) {

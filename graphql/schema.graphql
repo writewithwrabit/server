@@ -118,6 +118,7 @@ input NewSubscription {
   stripeId: String!
   tokenId: String!
   subscriptionId: String!
+  trial: Boolean!
 }
 
 type Mutation {
@@ -126,5 +127,6 @@ type Mutation {
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!, date: String!): Entry!
   createEditor(input: NewEditor!): Editor!
-  createSubscription(input: NewSubscription!): String!
+  createSubscription(input: NewSubscription!): StripeSubscription!
+  cancelSubscription(id: ID!): String!
 }
