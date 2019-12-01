@@ -69,6 +69,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		CancelSubscription func(childComplexity int, id string) int
+		CompleteUserSignup func(childComplexity int, input SignedUpUser) int
 		CreateEditor       func(childComplexity int, input NewEditor) int
 		CreateEntry        func(childComplexity int, input NewEntry) int
 		CreateSubscription func(childComplexity int, input NewSubscription) int
@@ -147,6 +148,7 @@ type EntryResolver interface {
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input NewUser) (*User, error)
 	UpdateUser(ctx context.Context, input UpdatedUser) (*User, error)
+	CompleteUserSignup(ctx context.Context, input SignedUpUser) (*User, error)
 	CreateEntry(ctx context.Context, input NewEntry) (*Entry, error)
 	UpdateEntry(ctx context.Context, id string, input ExistingEntry, date string) (*Entry, error)
 	CreateEditor(ctx context.Context, input NewEditor) (*Editor, error)
@@ -297,6 +299,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CancelSubscription(childComplexity, args["id"].(string)), true
+
+	case "Mutation.completeUserSignup":
+		if e.complexity.Mutation.CompleteUserSignup == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_completeUserSignup_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CompleteUserSignup(childComplexity, args["input"].(SignedUpUser)), true
 
 	case "Mutation.createEditor":
 		if e.complexity.Mutation.CreateEditor == nil {
@@ -826,6 +840,11 @@ input NewUser {
   email: String!
 }
 
+input SignedUpUser {
+  id: ID!
+  firebaseID: String!
+}
+
 input UpdatedUser {
   id: ID!
   firebaseID: String
@@ -866,6 +885,7 @@ input NewSubscription {
 type Mutation {
   createUser(input: NewUser!): User!
   updateUser(input: UpdatedUser!): User!
+  completeUserSignup(input: SignedUpUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!, date: String!): Entry!
   createEditor(input: NewEditor!): Editor!
@@ -890,6 +910,20 @@ func (ec *executionContext) field_Mutation_cancelSubscription_args(ctx context.C
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_completeUserSignup_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 SignedUpUser
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNSignedUpUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐSignedUpUser(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1754,6 +1788,50 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().UpdateUser(rctx, args["input"].(UpdatedUser))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*User)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_completeUserSignup(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_completeUserSignup_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CompleteUserSignup(rctx, args["input"].(SignedUpUser))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4865,6 +4943,30 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSignedUpUser(ctx context.Context, obj interface{}) (SignedUpUser, error) {
+	var it SignedUpUser
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "id":
+			var err error
+			it.ID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "firebaseID":
+			var err error
+			it.FirebaseID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdatedUser(ctx context.Context, obj interface{}) (UpdatedUser, error) {
 	var it UpdatedUser
 	var asMap = obj.(map[string]interface{})
@@ -5081,6 +5183,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "updateUser":
 			out.Values[i] = ec._Mutation_updateUser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "completeUserSignup":
+			out.Values[i] = ec._Mutation_completeUserSignup(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -6036,6 +6143,10 @@ func (ec *executionContext) marshalNPreferredWritingTime2ᚕᚖgithubᚗcomᚋwr
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) unmarshalNSignedUpUser2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐSignedUpUser(ctx context.Context, v interface{}) (SignedUpUser, error) {
+	return ec.unmarshalInputSignedUpUser(ctx, v)
 }
 
 func (ec *executionContext) marshalNStats2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStats(ctx context.Context, sel ast.SelectionSet, v Stats) graphql.Marshaler {

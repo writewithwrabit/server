@@ -8,7 +8,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/mailgun/mailgun-go/v3"
 	stripe "github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/card"
 	"github.com/stripe/stripe-go/customer"
@@ -143,6 +145,43 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*
 
 	res = wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET firebase_id = $1, stripe_id = $2, first_name = $3, last_name = $4, email = $5, word_goal = $6 WHERE id = $7 RETURNING id", user.FirebaseID, user.StripeID, user.FirstName, user.LastName, user.Email, user.WordGoal, user.ID)
 	if err := res.Scan(&user.ID); err != nil {
+		panic(err)
+	}
+
+	return &user, nil
+}
+
+func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input SignedUpUser) (*User, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", input.ID)
+	var user User
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
+		panic(err)
+	}
+
+	res = wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET firebase_id = $1 WHERE id = $2 RETURNING id", input.FirebaseID, input.ID)
+	if err := res.Scan(&user.ID); err != nil {
+		panic(err)
+	}
+
+	// Initialize Mailgun
+	mgKey := os.Getenv("MAILGUN_KEY")
+	mg := mailgun.NewMailgun("mg.writewithwrabit.com", mgKey)
+
+	sender := "hello@writewithwrabit.com"
+	subject := "Welcome to your writing journey!"
+	body := "We hope you're ready to build a daily writing habit. It might not be easy but it's definitely rewarding!"
+	recipient := user.Email
+
+	message := mg.NewMessage(sender, subject, body, recipient)
+	// message.SetTemplate("app-template")
+	// message.AddTemplateVariable("passwordResetLink", "some link to your site unique to your user")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	_, _, err := mg.Send(ctx, message)
+
+	if err != nil {
 		panic(err)
 	}
 
