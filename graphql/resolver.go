@@ -8,9 +8,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/mailgun/mailgun-go/v3"
+	"github.com/mailgun/mailgun-go"
 	stripe "github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/card"
 	"github.com/stripe/stripe-go/customer"
@@ -176,10 +175,7 @@ func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input SignedU
 	// message.SetTemplate("app-template")
 	// message.AddTemplateVariable("passwordResetLink", "some link to your site unique to your user")
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	_, _, err := mg.Send(ctx, message)
+	_, _, err := mg.Send(message)
 
 	if err != nil {
 		panic(err)
