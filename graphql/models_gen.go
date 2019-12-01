@@ -46,6 +46,11 @@ type PreferredWritingTime struct {
 	Count int `json:"count"`
 }
 
+type SignedUpUser struct {
+	ID         string `json:"id"`
+	FirebaseID string `json:"firebaseID"`
+}
+
 type Stats struct {
 	WordsWritten          int                     `json:"wordsWritten"`
 	LongestStreak         int                     `json:"longestStreak"`

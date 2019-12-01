@@ -149,6 +149,18 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*
 	return &user, nil
 }
 
+func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input SignedUpUser) (*User, error) {
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", input.ID)
+
+	var user User
+	res = wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET firebase_id = $1 WHERE id = $7 RETURNING id", input.FirebaseID, input.ID)
+	if err := res.Scan(&user.ID); err != nil {
+		panic(err)
+	}
+
+	return &user, nil
+}
+
 func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubscription) (*StripeSubscription, error) {
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
