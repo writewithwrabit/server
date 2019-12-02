@@ -8,8 +8,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/mailgun/mailgun-go"
+	"github.com/mailgun/mailgun-go/v3"
 	stripe "github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/card"
 	"github.com/stripe/stripe-go/customer"
@@ -166,16 +167,32 @@ func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input SignedU
 	mgKey := os.Getenv("MAILGUN_KEY")
 	mg := mailgun.NewMailgun("mg.writewithwrabit.com", mgKey)
 
-	sender := "hello@writewithwrabit.com"
+	sender := "Team Wrabit <hello@writewithwrabit.com>"
 	subject := "Welcome to your writing journey!"
-	body := "We hope you're ready to build a daily writing habit. It might not be easy but it's definitely rewarding!"
+	body := ""
 	recipient := user.Email
 
 	message := mg.NewMessage(sender, subject, body, recipient)
-	// message.SetTemplate("app-template")
-	// message.AddTemplateVariable("passwordResetLink", "some link to your site unique to your user")
+	message.SetTemplate("app-template")
+	message.AddTemplateVariable("content", `Hey there! 👋<br><br>
+  
+  We hope you're ready to build a daily writing habit. It might not be easy but it's definitely rewarding!
+  We have a few tips to help you get started.<br><br>
 
-	_, _, err := mg.Send(message)
+  1. <b>Don't think too much.</b> Let whatever needs to come out, come out.<br>
+  2. <b>Don't feel to bad if you miss a day.</b> At Wrabit we start small and every word counts.<br>
+  3. <b>Have fun! 🎉</b> Building a habit is hard so we want it to be as enjoyable as possible.<br><br>
+
+  If there is anything we can do to support you, feel free to reach out. You can respond directly to this email! Our platform is new but we have lots planned. Thanks for being apart of <em>our</em> journey.<br><br>
+
+  Be well,<br>
+  Team Wrabit 🐇
+  `)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	_, _, err := mg.Send(ctx, message)
 
 	if err != nil {
 		panic(err)
