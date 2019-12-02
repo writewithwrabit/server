@@ -578,7 +578,10 @@ func (r *queryResolver) Stats(ctx context.Context, global bool) (*Stats, error) 
 		res = wrabitDB.LogAndQueryRow(r.db, longestStreakQuery, user.Subject)
 	}
 	err = res.Scan(&stats.LongestStreak)
-	if err != nil && err != sql.ErrNoRows {
+	// Check if there hasn't been a streak yet
+	if err != nil && err.Error() == "sql: Scan error on column index 0, name \"longest_streak\": converting NULL to int is unsupported" {
+		stats.LongestStreak = 0
+	} else if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
