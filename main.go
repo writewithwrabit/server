@@ -15,7 +15,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	_ "github.com/sqreen/go-agent/agent"
 	"github.com/sqreen/go-agent/sdk/middleware/sqhttp"
 	"github.com/writewithwrabit/server/auth"
 	graphql "github.com/writewithwrabit/server/graphql"
@@ -79,7 +78,6 @@ func main() {
 	} else {
 		log.Fatal(http.ListenAndServe(":"+port, sqhttp.Middleware(router)))
 	}
-
 }
 
 // DB gets a connection to the database.
@@ -90,20 +88,14 @@ func DB() *sql.DB {
 		user           = mustGetenv("CLOUDSQL_USER")
 		dbName         = os.Getenv("CLOUDSQL_DATABASE_NAME")
 		password       = os.Getenv("CLOUDSQL_PASSWORD")
-		socket         = os.Getenv("CLOUDSQL_SOCKET_PREFIX")
 		env            = os.Getenv("NODE_ENV")
 	)
-
-	// /cloudsql is used on App Engine.
-	if socket == "" {
-		socket = "/cloudsql"
-	}
 
 	dbURI := fmt.Sprintf("host=/cloudsql/%s dbname=%s user=%s password=%s", connectionName, dbName, user, password)
 	dialer := "postgres"
 	if env == "dev" {
 		dbURI = fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=disable", connectionName, dbName, user, password)
-		dialer = "cloudsqlpostgres"
+		// dialer = "cloudsqlpostgres"
 	}
 
 	conn, err := sql.Open(dialer, dbURI)

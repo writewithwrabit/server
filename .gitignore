@@ -4,3 +4,4 @@ client-secret.json
 env.yaml
 secrets.tar
 sqreen.yaml
+docker-compose-volumes

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  database:
+    environment:
+      - POSTGRES_DB=wrabit
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=allthesecurity
+    image: "postgres:9.6"
+    volumes:
+      - ./docker-compose-volumes/database:/var/lib/postgresql/data
+      - ./db/wrabit.sql:/docker-entrypoint-initdb.d/wrabit.sql
+    ports:
+      - 5432:5432
+
+  backend:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - 8080:8080
+    depends_on:
+      - database
