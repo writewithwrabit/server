@@ -1,5 +1,56 @@
 # Wrabit Server
 
+## Getting Started
+
+### Requirements
+
+For now the following are required:
+
+- Stripe (for payments)
+- Firebase (for auth)
+- Mailgun (for sending emails)
+
+I will do my best to work on removing these requirements in dev but I don't know if/how/when that will happen.
+
+### Environment
+
+```env
+// Sets your environment to dev which turns off some handy things
+// like the Sqreen agent. It also turns on the GraphQL playground
+NODE_ENV=dev
+
+// The username to login to postgres wth
+CLOUDSQL_USER=postgres
+
+// The password for the postgres user
+CLOUDSQL_PASSWORD=allthesecurity
+
+// For local dev this is the name of the Docker DB container (the host)
+CLOUDSQL_CONNECTION_NAME=database
+
+// Database to connect to
+CLOUDSQL_DATABASE_NAME=wrabit
+
+// Client secret used to connect with Firebase
+GOOGLE_APPLICATION_CREDENTIALS=client-secret.json
+
+// Used to interact with the Stripe platform
+STRIPE_KEY=XXXXXXXXXXXXXXXXXXXX
+
+// Used to send email through mailgun
+MAILGUN_KEY=XXXXXXXXXXXXXXXXXXXX
+
+// Used to encrypt user data
+ENCRYPTION_KEY=thisencryptsuserdatainthedatabase
+```
+
+### Setup
+
+1. Create required accounts (see above)
+2. Copy `.env.example` to `.env` and fill out the fields
+3. Modify last line of `wrabit.sql` to have a user for testing (or manually create an account)
+4. Run `docker-compose up`
+
 ## Generate GraphQL Schema
 
 1. Make changes to `schema.graphql`
