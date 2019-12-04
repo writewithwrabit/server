@@ -580,8 +580,12 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 		multiplier = multiplier - (float64(daySinceLastWrote) * 0.1)
 	}
 
+	fmt.Println("Setting user multiplier to ", multiplier)
+
 	// int truncates the float which is fine for my purposes
 	wordGoal := int(float64(user.WordGoal) * multiplier)
+
+	fmt.Println("Setting user word goal to ", multiplier)
 
 	return wordGoal, nil
 }
