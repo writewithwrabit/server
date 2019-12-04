@@ -555,14 +555,14 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 	daySinceLastWrote := 0
 
 	// Attempt to get multiplier from a running streak
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT day_count FROM streaks WHERE user_id = $1 AND date_part('day', updated_at) <= date_part('day', NOW() - '1 day'::INTERVAL);", userID)
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT day_count FROM streaks WHERE user_id = $1 AND updated_at >= NOW() - '1 day'::INTERVAL;", userID)
 	err := res.Scan(&streakDayCount)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
 	// Figure out when the last entry was written
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', NOW() - updated_at::timestamp) As day_since_last_entry FROM entries WHERE user_id = $1 AND goal_hit = true ORDER BY updated_at;", userID)
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', NOW() - created_at::timestamp) As day_since_last_entry FROM entries WHERE user_id = $1 AND goal_hit = true ORDER BY created_at DESC LIMIT 1;", userID)
 	err = res.Scan(&daySinceLastWrote)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
