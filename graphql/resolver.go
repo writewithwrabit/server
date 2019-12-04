@@ -568,9 +568,7 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 		panic(err)
 	}
 
-	if streakDayCount > 2 && streakDayCount < 10 {
-		multiplier = float64(streakDayCount) / 10
-	} else if streakDayCount >= 10 {
+	if streakDayCount >= 10 {
 		multiplier = 1.0
 	} else if daySinceLastWrote > 0 && daySinceLastWrote < 10 {
 		// 1 --> 0.9
