@@ -97,6 +97,7 @@ type ComplexityRoot struct {
 		Stats            func(childComplexity int, global bool) int
 		User             func(childComplexity int, id *string) int
 		UserByFirebaseID func(childComplexity int, firebaseID *string) int
+		WordGoal         func(childComplexity int, userID string) int
 	}
 
 	Stats struct {
@@ -163,6 +164,7 @@ type QueryResolver interface {
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
 	DailyEntry(ctx context.Context, userID string, date string) (*Entry, error)
 	Stats(ctx context.Context, global bool) (*Stats, error)
+	WordGoal(ctx context.Context, userID string) (int, error)
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
@@ -503,6 +505,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.UserByFirebaseID(childComplexity, args["firebaseID"].(*string)), true
 
+	case "Query.wordGoal":
+		if e.complexity.Query.WordGoal == nil {
+			break
+		}
+
+		args, err := ec.field_Query_wordGoal_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.WordGoal(childComplexity, args["userID"].(string)), true
+
 	case "Stats.longestEntry":
 		if e.complexity.Stats.LongestEntry == nil {
 			break
@@ -832,6 +846,7 @@ type Query {
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
   stats(global: Boolean!): Stats!
+  wordGoal(userID: ID!): Int!
 }
 
 input NewUser {
@@ -1160,6 +1175,20 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["ID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_wordGoal_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["userID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userID"] = arg0
 	return args, nil
 }
 
@@ -2560,6 +2589,50 @@ func (ec *executionContext) _Query_stats(ctx context.Context, field graphql.Coll
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNStats2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStats(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_wordGoal(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_wordGoal_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().WordGoal(rctx, args["userID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5404,6 +5477,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_stats(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "wordGoal":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_wordGoal(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

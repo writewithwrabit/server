@@ -537,6 +537,54 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 	return entry, nil
 }
 
+func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error) {
+	if user := auth.ForContext(ctx); user == nil {
+		return 0, fmt.Errorf("Access denied")
+	}
+
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT firebase_id, word_goal FROM users WHERE id = $1", userID)
+	var user User
+	if err := res.Scan(&user.FirebaseID, &user.WordGoal); err != nil {
+		panic(err)
+	}
+
+	// Multiplier starts at 100%
+	multiplier := 1.0
+	streakDayCount := 0
+	daySinceLastWrote := 0
+
+	// Attempt to get multiplier from a running streak
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT day_count FROM streaks WHERE user_id = $1 AND date_part('day', updated_at) <= date_part('day', NOW() - '1 day'::INTERVAL);", user.FirebaseID)
+	err := res.Scan(&streakDayCount)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	// Figure out when the last entry was written
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', NOW() - updated_at::timestamp) As day_since_last_entry FROM entries WHERE user_id = $1;", user.FirebaseID)
+	err = res.Scan(&daySinceLastWrote)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err)
+	}
+
+	if streakDayCount > 2 && streakDayCount < 10 {
+		multiplier = float64(streakDayCount) / 10
+	} else if daySinceLastWrote > 0 && daySinceLastWrote < 10 {
+		// 1 --> 0.9
+		// 2 --> 0.8
+		// 3 --> 0.7
+		// ...
+		multiplier = multiplier - (float64(daySinceLastWrote) * 0.1)
+	} else if daySinceLastWrote > 10 {
+		multiplier = 0.1
+	}
+
+	// int truncates the float which is fine for my purposes
+	wordGoal := int(float64(user.WordGoal) * multiplier)
+
+	return wordGoal, nil
+}
+
 func (r *queryResolver) Stats(ctx context.Context, global bool) (*Stats, error) {
 	user := auth.ForContext(ctx)
 	if user == nil {
