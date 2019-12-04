@@ -76,6 +76,7 @@ type Query {
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
   stats(global: Boolean!): Stats!
+  wordGoal(userID: ID!): Int!
 }
 
 input NewUser {
