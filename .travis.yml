@@ -16,8 +16,6 @@ stages:
     project: wrabit-webapp
     default: true
     skip_cleanup: true
-    on:
-      all_branches: true
 - name: Deploy Prod
   if: branch = master
   before_deploy:
