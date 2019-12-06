@@ -83,7 +83,7 @@ Secrets are currently stored in a local `.env` file. In order to get them onto t
 1. Zip the secrets you want into a `secrets.tar` file (which is git ignored)
 
     ```bash
-    tar cvf secrets.tar .prod.env client-secret.json sqreen.yaml
+    tar cvf secrets.tar .prod.env .stage.env client-secret.json sqreen.yaml
     ```
 
 2. Encrypt the zip with the Travis encrypt tool

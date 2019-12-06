@@ -1,14 +1,29 @@
 language: go
 go:
-  - 1.13.x
-deploy:
-  provider: gae
-  keyfile: client-secret.json
-  project: wrabit-webapp
-  default: true
-  skip_cleanup: true
+- 1.13.x
 before_install:
 - openssl aes-256-cbc -K $encrypted_e626bbe42ecb_key -iv $encrypted_e626bbe42ecb_iv
   -in secrets.tar.enc -out secrets.tar -d
 - tar xvf secrets.tar
-- mv .prod.env .env
+stages:
+- name: Deploy Stage
+  before_deploy:
+  - mv .stage.env .env
+  deploy:
+    config: stage.yaml
+    provider: gae
+    keyfile: client-secret.json
+    project: wrabit-webapp
+    default: true
+    skip_cleanup: true
+- name: Deploy Prod
+  if: branch = master
+  before_deploy:
+  - mv .prod.env .env
+  deploy:
+    config: prod.yaml
+    provider: gae
+    keyfile: client-secret.json
+    project: wrabit-webapp
+    default: true
+    skip_cleanup: true
