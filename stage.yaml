@@ -1,2 +1,4 @@
 runtime: go113
 service: stage
+env_variables:
+  NODE_ENV: "stage"

@@ -14,8 +14,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
-  _ "github.com/lib/pq"
-  _ "github.com/sqreen/go-agent/agent"
+	_ "github.com/lib/pq"
+	_ "github.com/sqreen/go-agent/agent"
 	"github.com/sqreen/go-agent/sdk/middleware/sqhttp"
 	"github.com/writewithwrabit/server/auth"
 	graphql "github.com/writewithwrabit/server/graphql"
@@ -27,11 +27,14 @@ const defaultPort = "8080"
 var db *sql.DB
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("File .env not found!")
+	env := os.Getenv("NODE_ENV")
+	if "" == env {
+		env = "dev"
 	}
 
-	env := os.Getenv("NODE_ENV")
+	if err := godotenv.Load("." + env + ".env"); err != nil {
+		log.Println("File .env not found!")
+	}
 
 	router := chi.NewRouter()
 

@@ -1,2 +1,4 @@
 runtime: go113
 service: prod
+env_variables:
+  NODE_ENV: "prod"

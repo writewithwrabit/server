@@ -8,31 +8,17 @@ before_install:
   -in secrets.tar.enc -out secrets.tar -d
 - tar xvf secrets.tar
 
-stages:
-  - Deploy to Stage
-  - Deploy to Prod
+deploy:
+  - provider: gae
+    config: stage.yaml
+    keyfile: client-secret.json
+    project: wrabit-webapp
+    default: true
+    skip_cleanup: true
+  - provider: gae
+    config: prod.yaml
+    keyfile: client-secret.json
+    project: wrabit-webapp
+    default: true
+    skip_cleanup: true
 
-jobs:
-  include:
-    stage: Deploy Stage
-      if: branch = master
-      before_deploy:
-      - mv .stage.env .env
-      deploy:
-        config: stage.yaml
-        provider: gae
-        keyfile: client-secret.json
-        project: wrabit-webapp
-        default: true
-        skip_cleanup: true
-    stage: Deploy Prod
-      if: branch = master
-      before_deploy:
-      - mv .prod.env .env
-      deploy:
-        config: prod.yaml
-        provider: gae
-        keyfile: client-secret.json
-        project: wrabit-webapp
-        default: true
-        skip_cleanup: true
