@@ -47,7 +47,7 @@ ENCRYPTION_KEY=thisencryptsuserdatainthedatabase
 ### Setup
 
 1. Create required accounts (see above)
-2. Copy `.env.example` to `.env` and fill out the fields
+2. Copy `.env.example` to `.dev.env` and fill out the fields
 3. Modify last line of `wrabit.sql` to have a user for testing (or manually create an account)
 4. Run `docker-compose up`
 
