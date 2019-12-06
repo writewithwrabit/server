@@ -2,20 +2,20 @@ language: go
 go:
 - 1.13.x
 before_install:
-- rm Makefile
 - openssl aes-256-cbc -K $encrypted_e626bbe42ecb_key -iv $encrypted_e626bbe42ecb_iv
   -in secrets.tar.enc -out secrets.tar -d
+- rm Makefile
 - tar xvf secrets.tar
 deploy:
 - provider: gae
   config: stage.yaml
-  keyfile: client-secret.json
+  keyfile: gcp-deploy.json
   project: wrabit-webapp
   default: true
   skip_cleanup: true
 - provider: gae
   config: prod.yaml
-  keyfile: client-secret.json
+  keyfile: gcp-deploy.json
   project: wrabit-webapp
   default: true
   skip_cleanup: true

@@ -1,4 +1,5 @@
-client-secret.json
+gcp-deploy.json
+firebase.*.json
 .DS_Store
 *.env
 env.yaml
