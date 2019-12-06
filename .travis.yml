@@ -14,7 +14,7 @@ stages:
 
 jobs:
   include:
-    stage: Deploy Stage
+    stage: Deploy to Stage
       if: branch = master
       before_deploy:
       - mv .stage.env .env
@@ -25,7 +25,7 @@ jobs:
         project: wrabit-webapp
         default: true
         skip_cleanup: true
-    stage: Deploy Prod
+    stage: Deploy to Prod
       if: branch = master
       before_deploy:
       - mv .prod.env .env
