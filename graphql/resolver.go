@@ -568,14 +568,16 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 		panic(err)
 	}
 
-	if streakDayCount >= 10 {
+	if streakDayCount > 0 && streakDayCount < 10 {
+		multiplier = float64(streakDayCount)/10 + 0.1
+	} else if streakDayCount >= 10 {
 		multiplier = 1.0
 	} else if daySinceLastWrote > 0 && daySinceLastWrote < 10 {
 		// 1 --> 0.9
 		// 2 --> 0.8
 		// 3 --> 0.7
 		// ...
-		multiplier = multiplier + (float64(daySinceLastWrote) * 0.1)
+		multiplier = 1.0 + (float64(daySinceLastWrote) * 0.1)
 	}
 
 	// int truncates the float which is fine for my purposes
