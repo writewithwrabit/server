@@ -735,10 +735,17 @@ func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*Stri
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
-	subscription, _ := sub.Get(
-		obj.StripeSubscriptionID,
+	if obj.StripeSubscriptionID == nil {
+		return &StripeSubscription{}, nil
+	}
+
+	subscription, err := sub.Get(
+		*obj.StripeSubscriptionID,
 		nil,
 	)
+	if err != nil {
+		return &StripeSubscription{}, nil
+	}
 
 	userSubscription := &StripeSubscription{
 		ID:               subscription.ID,
@@ -755,6 +762,10 @@ func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*Stri
 type stripeSubscriptionResolver struct{ *Resolver }
 
 func (r *stripeSubscriptionResolver) Plan(ctx context.Context, obj *StripeSubscription) (*Plan, error) {
+	if obj.ID == "" {
+		return &Plan{}, nil
+	}
+
 	plan := &Plan{
 		ID:       obj.Plan.ID,
 		Nickname: obj.Plan.Nickname,
