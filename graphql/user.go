@@ -10,5 +10,5 @@ type User struct {
 	WordGoal             int     `json:"wordGoal"`
 	CreatedAt            string  `json:"createdAt"`
 	UpdatedAt            string  `json:"updatedAt"`
-	StripeSubscriptionID string  `json:"stripeSubscriptionID"`
+	StripeSubscriptionID *string `json:"stripeSubscriptionID"`
 }

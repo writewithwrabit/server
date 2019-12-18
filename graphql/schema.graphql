@@ -8,7 +8,7 @@ type User {
   wordGoal: Int!
   createdAt: String!
   updatedAt: String!
-  StripeSubscription: StripeSubscription
+  StripeSubscription: StripeSubscription!
 }
 
 type Entry {

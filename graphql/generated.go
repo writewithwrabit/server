@@ -778,7 +778,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
   wordGoal: Int!
   createdAt: String!
   updatedAt: String!
-  StripeSubscription: StripeSubscription
+  StripeSubscription: StripeSubscription!
 }
 
 type Entry {
@@ -3689,12 +3689,15 @@ func (ec *executionContext) _User_StripeSubscription(ctx context.Context, field 
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*StripeSubscription)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx, field.Selections, res)
+	return ec.marshalNStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -5745,6 +5748,9 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._User_StripeSubscription(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			})
 		default:
@@ -6623,17 +6629,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	return ec.marshalOString2string(ctx, sel, *v)
-}
-
-func (ec *executionContext) marshalOStripeSubscription2githubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx context.Context, sel ast.SelectionSet, v StripeSubscription) graphql.Marshaler {
-	return ec._StripeSubscription(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOStripeSubscription2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋgraphqlᚐStripeSubscription(ctx context.Context, sel ast.SelectionSet, v *StripeSubscription) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._StripeSubscription(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValue(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {
