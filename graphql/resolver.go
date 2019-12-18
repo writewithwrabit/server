@@ -379,10 +379,10 @@ func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
 }
 
 func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string) (*User, error) {
-	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal, stripe_subscription_id FROM users WHERE firebase_id = $1", firebaseID)
+	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal, stripe_subscription_id, created_at FROM users WHERE firebase_id = $1", firebaseID)
 
 	var user User
-	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.StripeSubscriptionID); err != nil {
+	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.StripeSubscriptionID, &user.CreatedAt); err != nil {
 		panic(err)
 	}
 
