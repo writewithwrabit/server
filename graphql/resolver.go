@@ -551,20 +551,24 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 
 	// Multiplier starts at 10%
 	multiplier := 0.1
+
 	lastStreakDayCount := 0
+	lastEntryID := 0
+
 	daySinceLastWrote := 0
+	entryID := 0
 
 	// Get last streak
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT day_count FROM streaks WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1;", userID)
-	err := res.Scan(&lastStreakDayCount)
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT day_count, last_entry_id FROM streaks WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1;", userID)
+	err := res.Scan(&lastStreakDayCount, &lastEntryID)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
 
 	// Figure out when the last entry was written
 	// Is 0 if they wrote within 24 hours
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', NOW() - created_at::timestamp) As day_since_last_entry FROM entries WHERE user_id = $1 AND goal_hit = true ORDER BY created_at DESC LIMIT 1;", userID)
-	err = res.Scan(&daySinceLastWrote)
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', NOW() - created_at::timestamp) As day_since_last_entry, id FROM entries WHERE user_id = $1 AND goal_hit = true ORDER BY created_at DESC LIMIT 1;", userID)
+	err = res.Scan(&daySinceLastWrote, &entryID)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
 	}
@@ -572,7 +576,8 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 	// TODO: Decrement from goal count instead of resetting to 0.1 if lastStreakDayCount < 10
 	if daySinceLastWrote < 2 && lastStreakDayCount > 0 && lastStreakDayCount < 10 {
 		multiplier = float64(lastStreakDayCount) / 10
-		if daySinceLastWrote == 1 {
+		// TODO: Use the date from a user instead of comparing IDs
+		if daySinceLastWrote == 1 && lastEntryID != entryID {
 			multiplier = multiplier + 0.1
 		}
 	} else if daySinceLastWrote < 2 && lastStreakDayCount >= 10 {
