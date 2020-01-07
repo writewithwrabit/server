@@ -103,6 +103,11 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*
 		panic(err)
 	}
 
+	userContext := auth.ForContext(ctx)
+	if userContext == nil || userContext.Subject != *user.FirebaseID {
+		return &User{}, fmt.Errorf("Access denied")
+	}
+
 	firebaseID := user.FirebaseID
 	if input.FirebaseID != nil {
 		firebaseID = input.FirebaseID
