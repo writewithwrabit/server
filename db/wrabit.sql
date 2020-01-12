@@ -40,6 +40,15 @@ CREATE TABLE streaks (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE donations (
+  id SERIAL,
+  user_id VARCHAR,
+  amount INT,
+  paid BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE OR REPLACE FUNCTION trigger_updated()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -65,6 +74,11 @@ EXECUTE PROCEDURE trigger_updated();
 
 CREATE TRIGGER updated
 BEFORE UPDATE ON streaks
+FOR EACH ROW
+EXECUTE PROCEDURE trigger_updated();
+
+CREATE TRIGGER updated
+BEFORE UPDATE ON donations
 FOR EACH ROW
 EXECUTE PROCEDURE trigger_updated();
 
