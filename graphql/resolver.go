@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mailgun/mailgun-go/v3"
@@ -327,6 +328,7 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		if err != nil && err != sql.ErrNoRows {
 			panic(err)
 		}
+		newStreakCount := streak.DayCount + 1
 
 		// If no streak exists, create one
 		if err == sql.ErrNoRows {
@@ -335,9 +337,53 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 				panic(err)
 			}
 		} else if streak != nil && streak.LastEntryID != entry.ID {
-			res := wrabitDB.LogAndQueryRow(r.db, "UPDATE streaks SET last_entry_id = $1, day_count = day_count + 1 WHERE id = $2 AND user_id = $3 RETURNING id", entry.ID, streak.ID, entry.UserID)
+			res := wrabitDB.LogAndQueryRow(r.db, "UPDATE streaks SET last_entry_id = $1, day_count = $2 WHERE id = $3 AND user_id = $4 RETURNING id", entry.ID, newStreakCount, streak.ID, entry.UserID)
 			if err := res.Scan(&entry.ID); err != nil {
 				panic(err)
+			}
+		}
+
+		// Add donation if sequired
+		res = wrabitDB.LogAndQueryRow(r.db, "SELECT stripe_subscription_id FROM users WHERE firebase_id = $1", entry.UserID)
+
+		var user User
+		if err := res.Scan(&user.StripeSubscriptionID); err != nil {
+			fmt.Println(err)
+			return entry, nil
+		}
+
+		// TODO: This logic is duplicated...
+		stripe.Key = os.Getenv("STRIPE_KEY")
+
+		subscription, err := sub.Get(
+			*user.StripeSubscriptionID,
+			nil,
+		)
+		if err != nil {
+			fmt.Println(err)
+			return entry, nil
+		}
+
+		userSubscription := &StripeSubscription{
+			ID:               subscription.ID,
+			CurrentPeriodEnd: subscription.CurrentPeriodEnd,
+			TrialEnd:         subscription.TrialEnd,
+			CancelAt:         subscription.CancelAt,
+			Status:           subscription.Status,
+			Plan:             subscription.Plan,
+		}
+
+		// Check subscription is valid
+		if userSubscription.Status != "active" {
+			return entry, nil
+		}
+
+		yearlySub := strings.Contains(strings.ToLower(userSubscription.Plan.Nickname), "yearly")
+		if (yearlySub && newStreakCount%7 == 0) || newStreakCount%14 == 0 {
+			res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO donations (user_id, amount) VALUES ($1, $2) RETURNING id", entry.UserID, 1)
+			if err := res.Scan(&entry.ID); err != nil {
+				fmt.Println(err)
+				return entry, nil
 			}
 		}
 	}
