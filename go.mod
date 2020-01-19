@@ -15,5 +15,5 @@ require (
 	github.com/sqreen/go-agent v0.1.0-beta.7
 	github.com/stripe/stripe-go v63.2.2+incompatible
 	github.com/vektah/gqlparser v1.1.2
-	google.golang.org/api v0.10.0
+	google.golang.org/api v0.15.0
 )
