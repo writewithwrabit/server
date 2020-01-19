@@ -1,0 +1,34 @@
+  # .gqlgen.yml example
+#
+# Refer to https://gqlgen.com/config/
+# for detailed .gqlgen.yml documentation.
+
+schema:
+- schema/**/*.graphql
+
+exec:
+  filename: graph/generated/generated.go
+  package: generated
+
+model:
+  filename: models/models_gen.go
+  package: models
+
+models:
+  Editor:
+    model: github.com/writewithwrabit/server/models.Editor
+  Entry:
+    model: github.com/writewithwrabit/server/models.Entry
+  Streak:
+    model: github.com/writewithwrabit/server/models.Streak
+  User:
+    model: github.com/writewithwrabit/server/models.User
+  StripeSubscription:
+    model: github.com/writewithwrabit/server/models.StripeSubscription
+
+resolver:
+  filename: resolvers/resolver.go
+  package: resolvers
+  type: Resolver
+
+autobind: []
