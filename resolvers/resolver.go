@@ -19,57 +19,59 @@ import (
 	"github.com/writewithwrabit/server/auth"
 	cryptopasta "github.com/writewithwrabit/server/cryptopasta"
 	wrabitDB "github.com/writewithwrabit/server/db"
+	"github.com/writewithwrabit/server/graph/generated"
+	"github.com/writewithwrabit/server/models"
 )
 
 type Resolver struct {
 	db      *sql.DB
-	editors []*Editor
-	entries []*Entry
+	editors []*models.Editor
+	entries []*models.Entry
 }
 
-func New(db *sql.DB) Config {
-	return Config{
+func New(db *sql.DB) generated.Config {
+	return generated.Config{
 		Resolvers: &Resolver{
 			db: db,
 		},
 	}
 }
 
-func (r *Resolver) Mutation() MutationResolver {
+func (r *Resolver) Mutation() generated.MutationResolver {
 	return &mutationResolver{r}
 }
 
-func (r *Resolver) Query() QueryResolver {
+func (r *Resolver) Query() generated.QueryResolver {
 	return &queryResolver{r}
 }
 
-func (r *Resolver) Editor() EditorResolver {
+func (r *Resolver) Editor() generated.EditorResolver {
 	return &editorResolver{r}
 }
 
-func (r *Resolver) Entry() EntryResolver {
+func (r *Resolver) Entry() generated.EntryResolver {
 	return &entryResolver{r}
 }
 
-func (r *Resolver) Streak() StreakResolver {
+func (r *Resolver) Streak() generated.StreakResolver {
 	return &streakResolver{r}
 }
 
-func (r *Resolver) User() UserResolver {
+func (r *Resolver) User() generated.UserResolver {
 	return &userResolver{r}
 }
 
-func (r *Resolver) StripeSubscription() StripeSubscriptionResolver {
+func (r *Resolver) StripeSubscription() generated.StripeSubscriptionResolver {
 	return &stripeSubscriptionResolver{r}
 }
 
 type mutationResolver struct{ *Resolver }
 
-func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User, error) {
+func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser) (*models.User, error) {
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
-	user := &User{
+	user := &models.User{
 		FirstName: input.FirstName,
 		LastName:  input.LastName,
 		Email:     input.Email,
@@ -95,18 +97,18 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input NewUser) (*User
 	return user, nil
 }
 
-func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*User, error) {
+func (r *mutationResolver) UpdateUser(ctx context.Context, input models.UpdatedUser) (*models.User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", input.ID)
 
 	// TODO: Figure out why createdAt and updatedAt didn't work on this query
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
 	}
 
 	userContext := auth.ForContext(ctx)
 	if userContext == nil || userContext.Subject != *user.FirebaseID {
-		return &User{}, fmt.Errorf("Access denied")
+		return &models.User{}, fmt.Errorf("Access denied")
 	}
 
 	firebaseID := user.FirebaseID
@@ -139,7 +141,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*
 		wordGoal = *input.WordGoal
 	}
 
-	user = User{
+	user = models.User{
 		ID:         input.ID,
 		FirebaseID: firebaseID,
 		StripeID:   stripeID,
@@ -157,9 +159,9 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input UpdatedUser) (*
 	return &user, nil
 }
 
-func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input SignedUpUser) (*User, error) {
+func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input models.SignedUpUser) (*models.User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal FROM users WHERE id = $1", input.ID)
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal); err != nil {
 		panic(err)
 	}
@@ -207,7 +209,7 @@ func (r *mutationResolver) CompleteUserSignup(ctx context.Context, input SignedU
 	return &user, nil
 }
 
-func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubscription) (*StripeSubscription, error) {
+func (r *mutationResolver) CreateSubscription(ctx context.Context, input models.NewSubscription) (*models.StripeSubscription, error) {
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
@@ -236,7 +238,7 @@ func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubs
 		panic(err)
 	}
 
-	var user = User{
+	var user = models.User{
 		StripeID: &input.StripeID,
 	}
 	res := wrabitDB.LogAndQueryRow(r.db, "UPDATE users SET stripe_subscription_id = $1 WHERE stripe_id = $2 RETURNING id", subscription.ID, input.StripeID)
@@ -244,7 +246,7 @@ func (r *mutationResolver) CreateSubscription(ctx context.Context, input NewSubs
 		panic(err)
 	}
 
-	var newSubscription = &StripeSubscription{
+	var newSubscription = &models.StripeSubscription{
 		ID:               subscription.ID,
 		CurrentPeriodEnd: subscription.CurrentPeriodEnd,
 		TrialEnd:         subscription.TrialEnd,
@@ -268,12 +270,12 @@ func (r *mutationResolver) CancelSubscription(ctx context.Context, id string) (s
 	return "ok", nil
 }
 
-func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*Entry, error) {
+func (r *mutationResolver) CreateEntry(ctx context.Context, input models.NewEntry) (*models.Entry, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &Entry{}, fmt.Errorf("Access denied")
+		return &models.Entry{}, fmt.Errorf("Access denied")
 	}
 
-	entry := &Entry{
+	entry := &models.Entry{
 		ID:        "",
 		UserID:    input.UserID,
 		Content:   input.Content,
@@ -288,10 +290,10 @@ func (r *mutationResolver) CreateEntry(ctx context.Context, input NewEntry) (*En
 	return entry, nil
 }
 
-func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input ExistingEntry, date string) (*Entry, error) {
+func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input models.ExistingEntry, date string) (*models.Entry, error) {
 	user := auth.ForContext(ctx)
 	if user == nil || user.Subject != input.UserID {
-		return &Entry{}, fmt.Errorf("Access denied")
+		return &models.Entry{}, fmt.Errorf("Access denied")
 	}
 
 	key := [32]byte{}
@@ -305,7 +307,7 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		panic(err)
 	}
 
-	entry := &Entry{
+	entry := &models.Entry{
 		ID:        id,
 		UserID:    input.UserID,
 		Content:   input.Content,
@@ -323,7 +325,7 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		// Get the latest streak for the user
 		res := wrabitDB.LogAndQueryRow(r.db, "SELECT ID, user_id, day_count, last_entry_id FROM streaks WHERE user_id = $1 AND updated_at >= $2::timestamp - INTERVAL '1 DAY' ORDER BY created_at DESC LIMIT 1", entry.UserID, date)
 
-		var streak = new(Streak)
+		var streak = new(models.Streak)
 		err := res.Scan(&streak.ID, &streak.UserID, &streak.DayCount, &streak.LastEntryID)
 		if err != nil && err != sql.ErrNoRows {
 			panic(err)
@@ -346,7 +348,7 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 		// Add donation if sequired
 		res = wrabitDB.LogAndQueryRow(r.db, "SELECT stripe_subscription_id FROM users WHERE firebase_id = $1", entry.UserID)
 
-		var user User
+		var user models.User
 		if err := res.Scan(&user.StripeSubscriptionID); err != nil {
 			fmt.Println(err)
 			return entry, nil
@@ -364,7 +366,7 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 			return entry, nil
 		}
 
-		userSubscription := &StripeSubscription{
+		userSubscription := &models.StripeSubscription{
 			ID:               subscription.ID,
 			CurrentPeriodEnd: subscription.CurrentPeriodEnd,
 			TrialEnd:         subscription.TrialEnd,
@@ -391,12 +393,12 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input Exi
 	return entry, nil
 }
 
-func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*Editor, error) {
+func (r *mutationResolver) CreateEditor(ctx context.Context, input models.NewEditor) (*models.Editor, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &Editor{}, fmt.Errorf("Access denied")
+		return &models.Editor{}, fmt.Errorf("Access denied")
 	}
 
-	editor := &Editor{
+	editor := &models.Editor{
 		ID:          "",
 		UserID:      input.UserID,
 		ShowToolbar: input.ShowToolbar,
@@ -414,14 +416,14 @@ func (r *mutationResolver) CreateEditor(ctx context.Context, input NewEditor) (*
 
 type queryResolver struct{ *Resolver }
 
-func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
+func (r *queryResolver) User(ctx context.Context, id *string) (*models.User, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &User{}, fmt.Errorf("Access denied")
+		return &models.User{}, fmt.Errorf("Access denied")
 	}
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal, stripe_subscription_id FROM users WHERE id = $1", id)
 
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.StripeSubscriptionID); err != nil {
 		panic(err)
 	}
@@ -429,10 +431,10 @@ func (r *queryResolver) User(ctx context.Context, id *string) (*User, error) {
 	return &user, nil
 }
 
-func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string) (*User, error) {
+func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string) (*models.User, error) {
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT id, firebase_id, stripe_id, first_name, last_name, email, word_goal, stripe_subscription_id, created_at FROM users WHERE firebase_id = $1", firebaseID)
 
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.StripeSubscriptionID, &user.CreatedAt); err != nil {
 		panic(err)
 	}
@@ -440,18 +442,18 @@ func (r *queryResolver) UserByFirebaseID(ctx context.Context, firebaseID *string
 	return &user, nil
 }
 
-func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, error) {
+func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*models.Editor, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return []*Editor{}, fmt.Errorf("Access denied")
+		return []*models.Editor{}, fmt.Errorf("Access denied")
 	}
 
-	var editors []*Editor
+	var editors []*models.Editor
 
 	if id == nil {
 		res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM editors")
 		defer res.Close()
 		for res.Next() {
-			var editor = new(Editor)
+			var editor = new(models.Editor)
 			if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter, &editor.CreatedAt, &editor.UpdatedAt); err != nil {
 				panic(err)
 			}
@@ -461,7 +463,7 @@ func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, err
 	} else {
 		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM editors WHERE id = $1", id)
 
-		var editor = new(Editor)
+		var editor = new(models.Editor)
 		if err := res.Scan(&editor.ID, &editor.UserID, &editor.ShowCounter, &editor.ShowPrompt, &editor.ShowCounter, &editor.CreatedAt, &editor.UpdatedAt); err != nil {
 			panic(err)
 		}
@@ -472,22 +474,22 @@ func (r *queryResolver) Editors(ctx context.Context, id *string) ([]*Editor, err
 	return editors, nil
 }
 
-func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, error) {
+func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*models.Entry, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return []*Entry{}, fmt.Errorf("Access denied")
+		return []*models.Entry{}, fmt.Errorf("Access denied")
 	}
 
 	key := [32]byte{}
 	keyString := os.Getenv("ENCRYPTION_KEY")
 	copy(key[:], keyString)
 
-	var entries []*Entry
+	var entries []*models.Entry
 
 	if id == nil {
 		res := wrabitDB.LogAndQuery(r.db, "SELECT * FROM entries")
 		defer res.Close()
 		for res.Next() {
-			var entry = new(Entry)
+			var entry = new(models.Entry)
 			if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 				panic(err)
 			}
@@ -503,7 +505,7 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 	} else {
 		res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE id = $1", id)
 
-		var entry = new(Entry)
+		var entry = new(models.Entry)
 		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt, &entry.GoalHit); err != nil {
 			panic(err)
 		}
@@ -514,16 +516,16 @@ func (r *queryResolver) Entries(ctx context.Context, id *string) ([]*Entry, erro
 	return entries, nil
 }
 
-func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error) {
+func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*models.Entry, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return []*Entry{}, fmt.Errorf("Access denied")
+		return []*models.Entry{}, fmt.Errorf("Access denied")
 	}
 
 	key := [32]byte{}
 	keyString := os.Getenv("ENCRYPTION_KEY")
 	copy(key[:], keyString)
 
-	var entries []*Entry
+	var entries []*models.Entry
 
 	var res *sql.Rows
 	if startDate != nil && endDate == nil {
@@ -538,7 +540,7 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 
 	defer res.Close()
 	for res.Next() {
-		var entry = new(Entry)
+		var entry = new(models.Entry)
 		if err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt, &entry.GoalHit); err != nil {
 			panic(err)
 		}
@@ -555,9 +557,9 @@ func (r *queryResolver) EntriesByUserID(ctx context.Context, userID string, star
 	return entries, nil
 }
 
-func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date string) (*Entry, error) {
+func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date string) (*models.Entry, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &Entry{}, fmt.Errorf("Access denied")
+		return &models.Entry{}, fmt.Errorf("Access denied")
 	}
 
 	key := [32]byte{}
@@ -566,7 +568,7 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM entries WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC", userID, date)
 
-	var entry = new(Entry)
+	var entry = new(models.Entry)
 	err := res.Scan(&entry.ID, &entry.UserID, &entry.WordCount, &entry.Content, &entry.CreatedAt, &entry.UpdatedAt, &entry.GoalHit)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)
@@ -595,7 +597,7 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string, date string
 	}
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT word_goal FROM users WHERE firebase_id = $1", userID)
-	var user User
+	var user models.User
 	if err := res.Scan(&user.WordGoal); err != nil {
 		panic(err)
 	}
@@ -646,13 +648,13 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string, date string
 	return wordGoal, nil
 }
 
-func (r *queryResolver) Stats(ctx context.Context, global bool) (*Stats, error) {
+func (r *queryResolver) Stats(ctx context.Context, global bool) (*models.Stats, error) {
 	user := auth.ForContext(ctx)
 	if user == nil {
-		return &Stats{}, fmt.Errorf("Access denied")
+		return &models.Stats{}, fmt.Errorf("Access denied")
 	}
 
-	var stats = new(Stats)
+	var stats = new(models.Stats)
 
 	var res = new(sql.Row)
 	wordsWrittenQuery := "SELECT sum(word_count) as words_written FROM entries"
@@ -716,7 +718,7 @@ func (r *queryResolver) Stats(ctx context.Context, global bool) (*Stats, error) 
 	}
 	defer resTimes.Close()
 	for resTimes.Next() {
-		var preferredWritingTime = new(PreferredWritingTime)
+		var preferredWritingTime = new(models.PreferredWritingTime)
 		if err := resTimes.Scan(&preferredWritingTime.Hour, &preferredWritingTime.Count); err != nil {
 			panic(err)
 		}
@@ -730,14 +732,14 @@ func (r *queryResolver) Stats(ctx context.Context, global bool) (*Stats, error) 
 // Individul resolvers
 type editorResolver struct{ *Resolver }
 
-func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
+func (r *editorResolver) User(ctx context.Context, obj *models.Editor) (*models.User, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &User{}, fmt.Errorf("Access denied")
+		return &models.User{}, fmt.Errorf("Access denied")
 	}
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
@@ -747,14 +749,14 @@ func (r *editorResolver) User(ctx context.Context, obj *Editor) (*User, error) {
 
 type entryResolver struct{ *Resolver }
 
-func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
+func (r *entryResolver) User(ctx context.Context, obj *models.Entry) (*models.User, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &User{}, fmt.Errorf("Access denied")
+		return &models.User{}, fmt.Errorf("Access denied")
 	}
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
@@ -762,20 +764,20 @@ func (r *entryResolver) User(ctx context.Context, obj *Entry) (*User, error) {
 	return &user, nil
 }
 
-func (r *entryResolver) GoalHit(ctx context.Context, obj *Entry) (bool, error) {
+func (r *entryResolver) GoalHit(ctx context.Context, obj *models.Entry) (bool, error) {
 	return obj.GoalHit, nil
 }
 
 type streakResolver struct{ *Resolver }
 
-func (r *streakResolver) User(ctx context.Context, obj *Streak) (*User, error) {
+func (r *streakResolver) User(ctx context.Context, obj *models.Streak) (*models.User, error) {
 	if user := auth.ForContext(ctx); user == nil {
-		return &User{}, fmt.Errorf("Access denied")
+		return &models.User{}, fmt.Errorf("Access denied")
 	}
 
 	res := wrabitDB.LogAndQueryRow(r.db, "SELECT * FROM users WHERE firebase_id = $1", obj.UserID)
 
-	var user User
+	var user models.User
 	if err := res.Scan(&user.ID, &user.FirebaseID, &user.StripeID, &user.FirstName, &user.LastName, &user.Email, &user.WordGoal, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		panic(err)
 	}
@@ -783,18 +785,18 @@ func (r *streakResolver) User(ctx context.Context, obj *Streak) (*User, error) {
 	return &user, nil
 }
 
-func (r *streakResolver) LastEntryID(ctx context.Context, obj *Streak) (string, error) {
+func (r *streakResolver) LastEntryID(ctx context.Context, obj *models.Streak) (string, error) {
 	return obj.LastEntryID, nil
 }
 
 type userResolver struct{ *Resolver }
 
-func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*StripeSubscription, error) {
+func (r *userResolver) StripeSubscription(ctx context.Context, obj *models.User) (*models.StripeSubscription, error) {
 	// Initialize Stripe
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
 	if obj.StripeSubscriptionID == nil {
-		return &StripeSubscription{}, nil
+		return &models.StripeSubscription{}, nil
 	}
 
 	subscription, err := sub.Get(
@@ -802,10 +804,10 @@ func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*Stri
 		nil,
 	)
 	if err != nil {
-		return &StripeSubscription{}, nil
+		return &models.StripeSubscription{}, nil
 	}
 
-	userSubscription := &StripeSubscription{
+	userSubscription := &models.StripeSubscription{
 		ID:               subscription.ID,
 		CurrentPeriodEnd: subscription.CurrentPeriodEnd,
 		TrialEnd:         subscription.TrialEnd,
@@ -819,12 +821,12 @@ func (r *userResolver) StripeSubscription(ctx context.Context, obj *User) (*Stri
 
 type stripeSubscriptionResolver struct{ *Resolver }
 
-func (r *stripeSubscriptionResolver) Plan(ctx context.Context, obj *StripeSubscription) (*Plan, error) {
+func (r *stripeSubscriptionResolver) Plan(ctx context.Context, obj *models.StripeSubscription) (*models.Plan, error) {
 	if obj.ID == "" {
-		return &Plan{}, nil
+		return &models.Plan{}, nil
 	}
 
-	plan := &Plan{
+	plan := &models.Plan{
 		ID:       obj.Plan.ID,
 		Nickname: obj.Plan.Nickname,
 		Product:  obj.Plan.Product.ID,
@@ -833,6 +835,6 @@ func (r *stripeSubscriptionResolver) Plan(ctx context.Context, obj *StripeSubscr
 	return plan, nil
 }
 
-func (r *stripeSubscriptionResolver) Status(ctx context.Context, obj *StripeSubscription) (string, error) {
+func (r *stripeSubscriptionResolver) Status(ctx context.Context, obj *models.StripeSubscription) (string, error) {
 	return fmt.Sprintf("%s", obj.Status), nil
 }
