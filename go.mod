@@ -3,7 +3,7 @@ module github.com/writewithwrabit/server
 go 1.13
 
 require (
-	firebase.google.com/go v3.9.0+incompatible
+	firebase.google.com/go v3.12.0+incompatible
 	github.com/99designs/gqlgen v0.9.3
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190828224159-d93c53a4824c
 	github.com/go-chi/chi v4.0.3+incompatible
