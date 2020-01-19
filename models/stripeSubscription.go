@@ -1,4 +1,4 @@
-package server
+package models
 
 import stripe "github.com/stripe/stripe-go"
 

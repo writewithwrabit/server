@@ -1,4 +1,4 @@
-package server
+package models
 
 type Editor struct {
 	ID          string `json:"id"`

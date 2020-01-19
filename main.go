@@ -18,7 +18,7 @@ import (
 	_ "github.com/sqreen/go-agent/agent"
 	"github.com/sqreen/go-agent/sdk/middleware/sqhttp"
 	"github.com/writewithwrabit/server/auth"
-	graphql "github.com/writewithwrabit/server/graphql"
+	"github.com/writewithwrabit/server/generated"
 	"google.golang.org/api/option"
 )
 
@@ -71,7 +71,9 @@ func main() {
 
 	router.Use(auth.Middleware(client))
 
-	router.Handle("/query", handler.GraphQL(graphql.NewExecutableSchema(graphql.New(db))))
+	router.Handle("/query", handler.GraphQL(
+		generated.NewExecutableSchema(generated.New(db))),
+	)
 
 	if env == "dev" {
 		// Only allow the playground in dev

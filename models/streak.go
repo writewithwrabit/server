@@ -1,4 +1,4 @@
-package server
+package models
 
 type Streak struct {
 	ID          string `json:"id"`

@@ -1,4 +1,4 @@
-package server
+package models
 
 type Entry struct {
 	ID        string `json:"id"`
