@@ -588,7 +588,7 @@ func (r *queryResolver) DailyEntry(ctx context.Context, userID string, date stri
 	return entry, nil
 }
 
-func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error) {
+func (r *queryResolver) WordGoal(ctx context.Context, userID string, date string) (int, error) {
 	ctxUser := auth.ForContext(ctx)
 	if ctxUser == nil || ctxUser.Subject != userID {
 		return 0, fmt.Errorf("Access denied")
@@ -618,7 +618,7 @@ func (r *queryResolver) WordGoal(ctx context.Context, userID string) (int, error
 
 	// Figure out when the last entry was written
 	// Is 0 if they wrote within 24 hours
-	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', NOW() - created_at::timestamp) As day_since_last_entry, id FROM entries WHERE user_id = $1 AND goal_hit = true ORDER BY created_at DESC LIMIT 1;", userID)
+	res = wrabitDB.LogAndQueryRow(r.db, "SELECT date_part('day', $1 - created_at::timestamp) As day_since_last_entry, id FROM entries WHERE user_id = $2 AND goal_hit = true ORDER BY created_at DESC LIMIT 1;", date, userID)
 	err = res.Scan(&daySinceLastWrote, &entryID)
 	if err != nil && err != sql.ErrNoRows {
 		panic(err)

@@ -97,7 +97,7 @@ type ComplexityRoot struct {
 		Stats            func(childComplexity int, global bool) int
 		User             func(childComplexity int, id *string) int
 		UserByFirebaseID func(childComplexity int, firebaseID *string) int
-		WordGoal         func(childComplexity int, userID string) int
+		WordGoal         func(childComplexity int, userID string, date string) int
 	}
 
 	Stats struct {
@@ -164,7 +164,7 @@ type QueryResolver interface {
 	EntriesByUserID(ctx context.Context, userID string, startDate *string, endDate *string) ([]*Entry, error)
 	DailyEntry(ctx context.Context, userID string, date string) (*Entry, error)
 	Stats(ctx context.Context, global bool) (*Stats, error)
-	WordGoal(ctx context.Context, userID string) (int, error)
+	WordGoal(ctx context.Context, userID string, date string) (int, error)
 }
 type StreakResolver interface {
 	User(ctx context.Context, obj *Streak) (*User, error)
@@ -515,7 +515,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.WordGoal(childComplexity, args["userID"].(string)), true
+		return e.complexity.Query.WordGoal(childComplexity, args["userID"].(string), args["date"].(string)), true
 
 	case "Stats.longestEntry":
 		if e.complexity.Stats.LongestEntry == nil {
@@ -846,7 +846,7 @@ type Query {
   entriesByUserID(userID: ID!, startDate: String, endDate: String): [Entry!]!
   dailyEntry(userID: ID!, date: String!): Entry!
   stats(global: Boolean!): Stats!
-  wordGoal(userID: ID!): Int!
+  wordGoal(userID: ID!, date: String!): Int!
 }
 
 input NewUser {
@@ -1189,6 +1189,14 @@ func (ec *executionContext) field_Query_wordGoal_args(ctx context.Context, rawAr
 		}
 	}
 	args["userID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["date"]; ok {
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["date"] = arg1
 	return args, nil
 }
 
@@ -2617,7 +2625,7 @@ func (ec *executionContext) _Query_wordGoal(ctx context.Context, field graphql.C
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().WordGoal(rctx, args["userID"].(string))
+		return ec.resolvers.Query().WordGoal(rctx, args["userID"].(string), args["date"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
