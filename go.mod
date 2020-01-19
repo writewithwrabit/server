@@ -11,7 +11,7 @@ require (
 	github.com/gobuffalo/envy v1.8.1 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.2.0
-	github.com/mailgun/mailgun-go/v3 v3.6.3
+	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/sqreen/go-agent v0.1.0-beta.7
 	github.com/stripe/stripe-go v63.2.2+incompatible
 	github.com/vektah/gqlparser v1.1.2
