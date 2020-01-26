@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/mailgun/mailgun-go/v3"
@@ -376,16 +375,28 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input mod
 		}
 
 		// Check subscription is valid
-		if userSubscription.Status != "active" {
+		// Status === active
+		// CurrentPeriodEnd end has not passed
+		if userSubscription.Status != "active" && !time.Now().Before(time.Unix(subscription.CurrentPeriodEnd, 0)) {
 			return entry, nil
 		}
 
-		yearlySub := strings.Contains(strings.ToLower(userSubscription.Plan.Nickname), "yearly")
-		if (yearlySub && newStreakCount%7 == 0) || newStreakCount%14 == 0 {
-			res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO donations (user_id, amount) VALUES ($1, $2) RETURNING id", entry.UserID, 1)
-			if err := res.Scan(&entry.ID); err != nil {
-				fmt.Println(err)
-				return entry, nil
+		if newStreakCount%7 == 0 {
+			// Check to see if a donation has been made for the specific entry
+			res := wrabitDB.LogAndQueryRow(r.db, "SELECT id FROM donations WHERE user_id = $1 AND entry_id = $2 LIMIT 1", entry.UserID, entry.ID)
+			var donation = new(models.Donation)
+			err := res.Scan(&donation.ID)
+			if err != nil && err != sql.ErrNoRows {
+				panic(err)
+			}
+
+			// No donation has been made
+			if err == sql.ErrNoRows {
+				res = wrabitDB.LogAndQueryRow(r.db, "INSERT INTO donations (user_id, amount, entry_id) VALUES ($1, $2, $3) RETURNING id", entry.UserID, 1, entry.ID)
+				if err := res.Scan(&entry.ID); err != nil {
+					fmt.Println(err)
+					return entry, nil
+				}
 			}
 		}
 	}

@@ -46,7 +46,8 @@ CREATE TABLE donations (
   amount INT,
   paid BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  entry_id VARCHAR
 );
 
 CREATE OR REPLACE FUNCTION trigger_updated()
