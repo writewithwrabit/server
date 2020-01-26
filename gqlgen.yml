@@ -25,6 +25,8 @@ models:
     model: github.com/writewithwrabit/server/models.User
   StripeSubscription:
     model: github.com/writewithwrabit/server/models.StripeSubscription
+  Donation: 
+    model: github.com/writewithwrabit/server/models.Donation
 
 resolver:
   filename: resolvers/resolver.go
