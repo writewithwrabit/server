@@ -83,4 +83,4 @@ BEFORE UPDATE ON donations
 FOR EACH ROW
 EXECUTE PROCEDURE trigger_updated();
 
-INSERT INTO users (firebase_id, stripe_id, stripe_subscription_id, first_name, last_name, email, word_goal) VALUES ('IWoB2L4lcJW8brqOHd7oJfzn8vt2', 'cus_GIHI1V0ryeznB2', 'sub_GIHImr4be4B275', 'Test', 'Account', 'testing@writewithwrabit.com', 1000);
+INSERT INTO users (firebase_id, stripe_id, stripe_subscription_id, first_name, last_name, email, word_goal) VALUES ('6uP1r7qI8ZaYetQcGG6GYYYB2Em2', 'cus_GIHI1V0ryeznB2', 'sub_GIHImr4be4B275', 'Test', 'Account', 'testing@writewithwrabit.com', 1000);
