@@ -11,7 +11,7 @@ import (
 
 // A private key for context that only this package can access. This is important
 // to prevent collisions between different context uses
-var userCtxKey = &contextKey{"user"}
+var UserCtxKey = &contextKey{"user"}
 
 type contextKey struct {
 	name string
@@ -35,7 +35,7 @@ func Middleware(client *auth.Client) func(http.Handler) http.Handler {
 			}
 
 			// put it in context
-			ctx := context.WithValue(r.Context(), userCtxKey, token)
+			ctx := context.WithValue(r.Context(), UserCtxKey, token)
 
 			// and call the next with our new context
 			r = r.WithContext(ctx)
@@ -46,6 +46,6 @@ func Middleware(client *auth.Client) func(http.Handler) http.Handler {
 
 // ForContext finds the user from the context. REQUIRES Middleware to have run.
 func ForContext(ctx context.Context) *auth.Token {
-	raw, _ := ctx.Value(userCtxKey).(*auth.Token)
+	raw, _ := ctx.Value(UserCtxKey).(*auth.Token)
 	return raw
 }

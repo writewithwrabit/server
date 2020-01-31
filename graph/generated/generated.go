@@ -75,6 +75,7 @@ type ComplexityRoot struct {
 		CreateEntry        func(childComplexity int, input models.NewEntry) int
 		CreateSubscription func(childComplexity int, input models.NewSubscription) int
 		CreateUser         func(childComplexity int, input models.NewUser) int
+		DeleteEntry        func(childComplexity int, id string) int
 		UpdateEntry        func(childComplexity int, id string, input models.ExistingEntry, date string) int
 		UpdateUser         func(childComplexity int, input models.UpdatedUser) int
 	}
@@ -153,6 +154,7 @@ type MutationResolver interface {
 	CompleteUserSignup(ctx context.Context, input models.SignedUpUser) (*models.User, error)
 	CreateEntry(ctx context.Context, input models.NewEntry) (*models.Entry, error)
 	UpdateEntry(ctx context.Context, id string, input models.ExistingEntry, date string) (*models.Entry, error)
+	DeleteEntry(ctx context.Context, id string) (*models.Entry, error)
 	CreateEditor(ctx context.Context, input models.NewEditor) (*models.Editor, error)
 	CreateSubscription(ctx context.Context, input models.NewSubscription) (*models.StripeSubscription, error)
 	CancelSubscription(ctx context.Context, id string) (string, error)
@@ -362,6 +364,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateUser(childComplexity, args["input"].(models.NewUser)), true
+
+	case "Mutation.deleteEntry":
+		if e.complexity.Mutation.DeleteEntry == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteEntry_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteEntry(childComplexity, args["id"].(string)), true
 
 	case "Mutation.updateEntry":
 		if e.complexity.Mutation.UpdateEntry == nil {
@@ -904,6 +918,7 @@ type Mutation {
   completeUserSignup(input: SignedUpUser!): User!
   createEntry(input: NewEntry!): Entry!
   updateEntry(id: ID!, input: ExistingEntry!, date: String!): Entry!
+  deleteEntry(id: ID!): Entry!
   createEditor(input: NewEditor!): Editor!
   createSubscription(input: NewSubscription!): StripeSubscription!
   cancelSubscription(id: ID!): String!
@@ -996,6 +1011,20 @@ func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, 
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteEntry_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1958,6 +1987,50 @@ func (ec *executionContext) _Mutation_updateEntry(ctx context.Context, field gra
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().UpdateEntry(rctx, args["id"].(string), args["input"].(models.ExistingEntry), args["date"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Entry)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNEntry2ᚖgithubᚗcomᚋwritewithwrabitᚋserverᚋmodelsᚐEntry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteEntry(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteEntry_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteEntry(rctx, args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5283,6 +5356,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "updateEntry":
 			out.Values[i] = ec._Mutation_updateEntry(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteEntry":
+			out.Values[i] = ec._Mutation_deleteEntry(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
