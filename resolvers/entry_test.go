@@ -59,8 +59,6 @@ func TestDeleteEntry(t *testing.T) {
 		WithArgs("abcdefg", "1").WillReturnResult(result)
 
 	res, err := mutResolver.DeleteEntry(ctx, "1")
-	t.Log(res)
-	t.Log(err)
 
 	assert.Equal(t, res.ID, "1")
 	assert.Empty(t, err)
