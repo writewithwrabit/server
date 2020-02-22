@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	stripe "github.com/stripe/stripe-go"
@@ -144,10 +145,13 @@ func (r *mutationResolver) CreateEntry(ctx context.Context, input models.NewEntr
 		WordCount: input.WordCount,
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO entries (user_id, content, word_count) VALUES ($1, $2, $3) RETURNING id", entry.UserID, entry.Content, entry.WordCount)
-	if err := res.Scan(&entry.ID); err != nil {
+	res := wrabitDB.LogAndExec(r.db, "INSERT INTO entries (user_id, content, word_count) VALUES ($1, $2, $3) RETURNING id", entry.UserID, entry.Content, entry.WordCount)
+	id, err := res.LastInsertId()
+	if err != nil {
 		panic(err)
 	}
+
+	entry.ID = strconv.FormatInt(id, 10)
 
 	return entry, nil
 }
@@ -207,6 +211,12 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input mod
 			}
 		}
 
+		// The streak is not valid for a donation
+		// return early to save network/DB calls
+		if newStreakCount%7 != 0 {
+			return entry, nil
+		}
+
 		// Add donation if sequired
 		res = wrabitDB.LogAndQueryRow(r.db, "SELECT stripe_subscription_id FROM users WHERE firebase_id = $1", entry.UserID)
 
@@ -244,22 +254,20 @@ func (r *mutationResolver) UpdateEntry(ctx context.Context, id string, input mod
 			return entry, nil
 		}
 
-		if newStreakCount%7 == 0 {
-			// Check to see if a donation has been made for the specific entry
-			res := wrabitDB.LogAndQueryRow(r.db, "SELECT id FROM donations WHERE user_id = $1 AND entry_id = $2 LIMIT 1", entry.UserID, entry.ID)
-			var donation = new(models.Donation)
-			err := res.Scan(&donation.ID)
-			if err != nil && err != sql.ErrNoRows {
-				panic(err)
-			}
+		// Check to see if a donation has been made for the specific entry
+		res = wrabitDB.LogAndQueryRow(r.db, "SELECT id FROM donations WHERE user_id = $1 AND entry_id = $2 LIMIT 1", entry.UserID, entry.ID)
+		var donation = &models.Donation{}
+		err = res.Scan(&donation.ID)
+		if err != nil && err != sql.ErrNoRows {
+			panic(err)
+		}
 
-			// No donation has been made
-			if err == sql.ErrNoRows {
-				res = wrabitDB.LogAndQueryRow(r.db, "INSERT INTO donations (user_id, amount, entry_id) VALUES ($1, $2, $3) RETURNING id", entry.UserID, 1, entry.ID)
-				if err := res.Scan(&entry.ID); err != nil {
-					fmt.Println(err)
-					return entry, nil
-				}
+		// No donation has been made
+		if err == sql.ErrNoRows {
+			res = wrabitDB.LogAndQueryRow(r.db, "INSERT INTO donations (user_id, amount, entry_id) VALUES ($1, $2, $3) RETURNING id", entry.UserID, 1, entry.ID)
+			if err := res.Scan(&entry.ID); err != nil {
+				fmt.Println(err)
+				return entry, nil
 			}
 		}
 	}
