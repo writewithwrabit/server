@@ -33,6 +33,7 @@ github.com/DATA-DOG/go-sqlmock v1.4.1 h1:ThlnYciV1iM/V0OSF/dtkqWb6xo5qITT1TJBG1M
 github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200114205427-eb5e09ef70a5 h1:LsOdhR5HaGRDZW/qDaZecIOnKL7SDqWDVfI8we6SLzk=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200114205427-eb5e09ef70a5/go.mod h1:Ea/RL9yv5P3ywzBLD00Ho3cXFm41q7DQf25Y4Kbg+nw=
+github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200212165446-231cffdfe5a1/go.mod h1:Ea/RL9yv5P3ywzBLD00Ho3cXFm41q7DQf25Y4Kbg+nw=
 github.com/agnivade/levenshtein v1.0.1 h1:3oJU7J3FGFmyhn8KHjmVaZCN5hxTr7GxgRue+sxIXdQ=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883 h1:bvNMNQO63//z+xNgfBlViaCIJKLlCJ6/fmUseuG0wVQ=
