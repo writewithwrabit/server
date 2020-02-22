@@ -29,6 +29,7 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.4.0 h1:yxQ63CFIA8Sxkh0vqIofuNrsXl/LZ42TpeTLV4Nb5HM=
 github.com/DATA-DOG/go-sqlmock v1.4.0/go.mod h1:3TucWNLPFOLcHhha1CPp7Kis1UG2h/AqGROPyOeZzsM=
+github.com/DATA-DOG/go-sqlmock v1.4.1 h1:ThlnYciV1iM/V0OSF/dtkqWb6xo5qITT1TJBG1MRDJM=
 github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200114205427-eb5e09ef70a5 h1:LsOdhR5HaGRDZW/qDaZecIOnKL7SDqWDVfI8we6SLzk=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200114205427-eb5e09ef70a5/go.mod h1:Ea/RL9yv5P3ywzBLD00Ho3cXFm41q7DQf25Y4Kbg+nw=
