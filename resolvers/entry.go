@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	stripe "github.com/stripe/stripe-go"
@@ -144,10 +145,13 @@ func (r *mutationResolver) CreateEntry(ctx context.Context, input models.NewEntr
 		WordCount: input.WordCount,
 	}
 
-	res := wrabitDB.LogAndQueryRow(r.db, "INSERT INTO entries (user_id, content, word_count) VALUES ($1, $2, $3) RETURNING id", entry.UserID, entry.Content, entry.WordCount)
-	if err := res.Scan(&entry.ID); err != nil {
+	res := wrabitDB.LogAndExec(r.db, "INSERT INTO entries (user_id, content, word_count) VALUES ($1, $2, $3) RETURNING id", entry.UserID, entry.Content, entry.WordCount)
+	id, err := res.LastInsertId()
+	if err != nil {
 		panic(err)
 	}
+
+	entry.ID = strconv.FormatInt(id, 10)
 
 	return entry, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/writewithwrabit/server/auth"
+	"github.com/writewithwrabit/server/models"
 )
 
 func TestDeleteEntryWithoutUser(t *testing.T) {
@@ -59,6 +60,47 @@ func TestDeleteEntry(t *testing.T) {
 		WithArgs("abcdefg", "1").WillReturnResult(result)
 
 	res, err := mutResolver.DeleteEntry(ctx, "1")
+
+	assert.Equal(t, res.ID, "1")
+	assert.Empty(t, err)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestCreateEntry(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	resolver := &Resolver{
+		db: db,
+	}
+	mutResolver := &mutationResolver{
+		Resolver: resolver,
+	}
+
+	token := &firebase.Token{
+		Subject: "abcdefg",
+	}
+
+	c := context.Background()
+	ctx := context.WithValue(c, auth.UserCtxKey, token)
+
+	result := sqlmock.NewResult(1, 1)
+	mock.ExpectExec("INSERT INTO entries \\(user_id, content, word_count\\) VALUES \\(\\$1, \\$2, \\$3\\) RETURNING id").
+		WithArgs("abcdefg", "a great entry", 1000).WillReturnResult(result)
+
+	var entry = models.NewEntry{
+		UserID:    "abcdefg",
+		Content:   "a great entry",
+		WordCount: 1000,
+	}
+
+	res, err := mutResolver.CreateEntry(ctx, entry)
 
 	assert.Equal(t, res.ID, "1")
 	assert.Empty(t, err)
