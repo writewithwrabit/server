@@ -1,4 +1,4 @@
-FROM golang:1.13.8-stretch
+FROM golang:1.14.0-stretch
 
 WORKDIR $GOPATH/src/server
 
