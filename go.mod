@@ -12,7 +12,7 @@ require (
 	github.com/go-chi/cors v1.0.1
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.3.0
-	github.com/mailgun/mailgun-go/v3 v3.6.4
+	github.com/mailgun/mailgun-go/v3/v4 v4.0.1
 	github.com/sqreen/go-agent v0.1.0-beta.9
 	github.com/stretchr/testify v1.5.1
 	github.com/stripe/stripe-go v68.11.0+incompatible
