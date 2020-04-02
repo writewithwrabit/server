@@ -8,7 +8,7 @@ require (
 	github.com/99designs/gqlgen v0.10.2
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200325185443-f6b3391c52cf
-	github.com/go-chi/chi v4.0.4+incompatible
+	github.com/go-chi/chi v4.1.0+incompatible
 	github.com/go-chi/cors v1.0.1
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.3.0
