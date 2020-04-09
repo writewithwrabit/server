@@ -40,6 +40,8 @@ github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200325185443-f6b3391c52cf
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200325185443-f6b3391c52cf/go.mod h1:Ea/RL9yv5P3ywzBLD00Ho3cXFm41q7DQf25Y4Kbg+nw=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200408174246-cce6360f0224 h1:VL/lZG1nqAmDlqAlxkr6Iw2HLmsyZYodMp9IfUMKHzg=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200408174246-cce6360f0224/go.mod h1:Ea/RL9yv5P3ywzBLD00Ho3cXFm41q7DQf25Y4Kbg+nw=
+github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200409164852-4999d63058ba h1:Whg+yIIJgIoZDkVMIIvq2D9fQjFet1ERbEkgvYFcNvY=
+github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200409164852-4999d63058ba/go.mod h1:Ea/RL9yv5P3ywzBLD00Ho3cXFm41q7DQf25Y4Kbg+nw=
 github.com/agnivade/levenshtein v1.0.1 h1:3oJU7J3FGFmyhn8KHjmVaZCN5hxTr7GxgRue+sxIXdQ=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883 h1:bvNMNQO63//z+xNgfBlViaCIJKLlCJ6/fmUseuG0wVQ=
