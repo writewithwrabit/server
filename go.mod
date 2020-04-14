@@ -9,7 +9,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200414174708-0eb0bd17f217
 	github.com/go-chi/chi v4.1.0+incompatible
-	github.com/go-chi/cors v1.0.1
+	github.com/go-chi/cors v1.1.1
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.3.0
 	github.com/mailgun/mailgun-go/v3 v3.6.4
