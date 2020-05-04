@@ -7,7 +7,7 @@ require (
 	firebase.google.com/go v3.12.0+incompatible
 	github.com/99designs/gqlgen v0.10.2
 	github.com/DATA-DOG/go-sqlmock v1.4.1
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200501161113-5e9e23d7cb91
+	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20200504171905-7e668d9ad0ba
 	github.com/go-chi/chi v4.1.0+incompatible
 	github.com/go-chi/cors v1.1.1
 	github.com/joho/godotenv v1.3.0
