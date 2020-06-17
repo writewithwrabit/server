@@ -14,7 +14,7 @@ require (
 	github.com/lib/pq v1.3.0
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/sqreen/go-agent v0.1.0-beta.9
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/stripe/stripe-go v68.11.0+incompatible
 	github.com/vektah/gqlparser v1.2.1
 	google.golang.org/api v0.27.0
