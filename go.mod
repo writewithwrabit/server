@@ -11,7 +11,7 @@ require (
 	github.com/go-chi/chi v4.1.0+incompatible
 	github.com/go-chi/cors v1.1.1
 	github.com/joho/godotenv v1.3.0
-	github.com/lib/pq v1.3.0
+	github.com/lib/pq v1.8.0
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/sqreen/go-agent v0.1.0-beta.9
 	github.com/stretchr/testify v1.6.1
